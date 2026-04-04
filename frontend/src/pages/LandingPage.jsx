@@ -100,7 +100,7 @@ export default function LandingPage() {
             border: 'none', cursor: 'pointer', fontSize: '16px',
             boxShadow: '0 20px 50px rgba(73, 75, 214, 0.3)',
             transition: 'all 0.3s',
-          }}>Start Your Free Trial</button>
+          }}>Launch Live Classroom</button>
           <button style={{
             padding: '16px 32px',
             backgroundColor: 'transparent', color: 'var(--on-surface)',
@@ -164,8 +164,8 @@ export default function LandingPage() {
               overflow: 'hidden',
               transition: 'all 0.5s',
             }}
-            onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(38, 42, 48, 0.6)'}
-            onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(28, 32, 37, 0.4)'}
+              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(38, 42, 48, 0.6)'}
+              onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(28, 32, 37, 0.4)'}
             >
               <div className="noise-texture" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
