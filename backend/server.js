@@ -9,6 +9,7 @@ const SessionManager = require('./sessionManager');
 const { processRound } = require('./riskEngine');
 const { getAIInsight } = require('./aiService');
 const { supabase, createUserClient } = require('./supabaseClient');
+const { generateToken, createRoom, deleteRoom, LIVEKIT_URL } = require('./livekitService');
 
 const app = express();
 const httpServer = createServer(app);
@@ -103,7 +104,7 @@ app.post('/api/sessions', authMiddleware, async (req, res) => {
   // Persist to Supabase
   try {
     const userClient = createUserClient(req.accessToken);
-    await userClient.from('sessions').insert({
+    const { data: insertedData, error: insertErr } = await userClient.from('sessions').insert({
       id: session.id,
       join_code: session.code,
       topic: session.topic,
@@ -111,12 +112,30 @@ app.post('/api/sessions', authMiddleware, async (req, res) => {
       total_rounds: session.totalRounds,
       current_round: session.currentRound,
       status: session.status,
-    });
+    }).select().single();
+
+    if (insertErr) {
+      console.error('❌ Supabase insert error:', insertErr.message, insertErr.details);
+    } else {
+      console.log(`✅ Session saved to Supabase: ${insertedData.id} (${insertedData.join_code})`);
+    }
   } catch (err) {
     console.error('Error persisting session:', err);
   }
 
   res.json(session);
+});
+
+// List Live Sessions (for student app polling) — MUST be before /:code wildcard
+app.get('/api/sessions/live', async (req, res) => {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('id, join_code, topic, livekit_room_name, stream_started_at, created_by')
+    .eq('is_streaming', true)
+    .eq('status', 'active');
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
 });
 
 // Get session by code (public — students use this to join)
@@ -125,6 +144,127 @@ app.get('/api/sessions/:code', (req, res) => {
   if (!session) return res.status(404).json({ error: 'Session not found' });
   res.json(session);
 });
+
+// ═══════════════════════════════════════════════
+// LiveKit Token Endpoint (teacher = publisher, student = viewer)
+// ═══════════════════════════════════════════════
+
+app.post('/api/livekit/token', async (req, res) => {
+  const { roomName, identity, isTeacher = false } = req.body;
+  if (!roomName || !identity) {
+    return res.status(400).json({ error: 'roomName and identity are required' });
+  }
+  try {
+    const token = await generateToken({ roomName, identity, isTeacher });
+    res.json({ token, url: LIVEKIT_URL });
+  } catch (err) {
+    console.error('Token generation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════
+// Start Stream — creates LiveKit room + updates Supabase + broadcasts
+// ═══════════════════════════════════════════════
+
+app.post('/api/sessions/:id/start-stream', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userClient = createUserClient(req.accessToken);
+
+  // Fetch session from Supabase to get join_code & topic
+  const { data: sessionRow, error: fetchErr } = await userClient
+    .from('sessions')
+    .select('*')
+    .eq('id', id)
+    .eq('created_by', req.user.id)
+    .single();
+
+  if (fetchErr || !sessionRow) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  const roomName = `classtwin-${sessionRow.join_code}`;
+
+  try {
+    // 1. Create LiveKit room
+    await createRoom(roomName);
+
+    // 2. Generate teacher token
+    const teacherIdentity = `teacher-${req.user.id}`;
+    const token = await generateToken({ roomName, identity: teacherIdentity, isTeacher: true });
+
+    // 3. Update Supabase session
+    await userClient.from('sessions').update({
+      is_streaming: true,
+      livekit_room_name: roomName,
+      stream_started_at: new Date().toISOString(),
+      status: 'active',
+    }).eq('id', id);
+
+    // 4. Also update in-memory session manager if it exists
+    const inMemSession = sessionManager.getSession(sessionRow.join_code);
+    if (inMemSession) {
+      inMemSession.isStreaming = true;
+      inMemSession.livekitRoomName = roomName;
+      inMemSession.status = 'active';
+      inMemSession.currentRound = 1;
+    }
+
+    // 5. Broadcast to all connected student sockets
+    io.emit('session_live', {
+      sessionId: id,
+      joinCode: sessionRow.join_code,
+      topic: sessionRow.topic,
+      livekitRoomName: roomName,
+      livekitUrl: LIVEKIT_URL,
+      streamStartedAt: new Date().toISOString(),
+    });
+
+    console.log(`🎥 Stream started: ${roomName} for session ${sessionRow.join_code}`);
+    res.json({ token, url: LIVEKIT_URL, roomName });
+  } catch (err) {
+    console.error('Start stream error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════
+// Stop Stream — deletes LiveKit room + updates Supabase
+// ═══════════════════════════════════════════════
+
+app.post('/api/sessions/:id/stop-stream', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userClient = createUserClient(req.accessToken);
+
+  const { data: sessionRow, error: fetchErr } = await userClient
+    .from('sessions')
+    .select('join_code, livekit_room_name')
+    .eq('id', id)
+    .single();
+
+  if (fetchErr || !sessionRow) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  try {
+    if (sessionRow.livekit_room_name) {
+      await deleteRoom(sessionRow.livekit_room_name);
+    }
+
+    await userClient.from('sessions').update({
+      is_streaming: false,
+      status: 'ended',
+    }).eq('id', id);
+
+    io.emit('session_ended_broadcast', { joinCode: sessionRow.join_code });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Stop stream error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 // ═══════════════════════════════════════════════
 // WebSocket Events

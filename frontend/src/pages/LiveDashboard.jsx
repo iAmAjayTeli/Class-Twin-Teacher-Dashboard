@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
+import useLiveKit from '../hooks/useLiveKit';
+import LiveVideoRoom from '../components/LiveVideoRoom';
 import Sidebar from '../components/Sidebar';
 
 const mockStudents = [
@@ -29,8 +31,11 @@ export default function LiveDashboard() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const sessionCode = params.get('code') || 'ABC123';
+  const sessionId   = params.get('sessionId') || null;
   const { students: liveStudents, aiInsight, classHealth } = useSocket(sessionCode);
+  const { token, livekitUrl, stopStream } = useLiveKit();
   const [elapsed, setElapsed] = useState(0);
+  const [pipCollapsed, setPipCollapsed] = useState(false);
 
   const students = liveStudents?.length > 0 ? liveStudents : mockStudents;
 
@@ -82,11 +87,11 @@ export default function LiveDashboard() {
             <span className="font-headline" style={{ fontWeight: 500 }}>{formatTime(elapsed)}</span>
           </div>
           <span className="material-symbols-outlined" style={{ color: 'rgba(224, 226, 234, 0.6)' }}>sensors</span>
-          <button onClick={() => navigate('/analytics')} style={{
+          <button onClick={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} style={{
             padding: '8px 20px', borderRadius: '999px',
-            border: '1px solid rgba(192, 193, 255, 0.3)',
-            color: 'var(--primary)', fontSize: '14px', fontWeight: 600,
-            background: 'transparent', cursor: 'pointer',
+            border: '1px solid rgba(220, 38, 38, 0.3)',
+            color: '#ef4444', fontSize: '14px', fontWeight: 600,
+            background: 'rgba(220,38,38,0.08)', cursor: 'pointer',
             transition: 'all 0.3s',
           }}>End Session</button>
         </div>
@@ -263,6 +268,61 @@ export default function LiveDashboard() {
           );
         })}
       </div>
+
+      {/* Floating PiP Video Panel */}
+      {token && livekitUrl && (
+        <div style={{
+          position: 'fixed',
+          bottom: '100px',
+          right: '32px',
+          zIndex: 60,
+          width: pipCollapsed ? '56px' : '300px',
+          backgroundColor: 'rgba(11, 15, 20, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          border: '1px solid rgba(99, 102, 241, 0.25)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1)',
+          overflow: 'hidden',
+          transition: 'width 0.3s ease',
+        }}>
+          {/* PiP header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: pipCollapsed ? '12px' : '10px 14px',
+            borderBottom: pipCollapsed ? 'none' : '1px solid rgba(99,102,241,0.15)',
+          }}>
+            {!pipCollapsed && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', animation: 'pulse-glow 1.5s ease-in-out infinite' }} />
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.08em' }}>LIVE STREAM</span>
+              </div>
+            )}
+            <button
+              onClick={() => setPipCollapsed(v => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', display: 'flex', alignItems: 'center', marginLeft: pipCollapsed ? 0 : 'auto' }}
+              title={pipCollapsed ? 'Expand' : 'Collapse'}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                {pipCollapsed ? 'videocam' : 'picture_in_picture'}
+              </span>
+            </button>
+          </div>
+
+          {/* PiP video body */}
+          {!pipCollapsed && (
+            <div style={{ padding: '12px', height: '220px' }}>
+              <LiveVideoRoom
+                token={token}
+                serverUrl={livekitUrl}
+                onDisconnect={async () => {
+                  if (sessionId) await stopStream(sessionId);
+                  navigate('/analytics');
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Decorative Atmosphere */}
       <div style={{ position: 'fixed', top: '20%', left: '10%', width: '30vw', height: '30vw', background: 'rgba(49, 46, 129, 0.1)', filter: 'blur(150px)', zIndex: -10, borderRadius: '50%' }} />

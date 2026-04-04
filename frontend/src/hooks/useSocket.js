@@ -78,7 +78,32 @@ export default function useSocket(sessionCode) {
     };
   }, []);
 
-  const createSession = useCallback((data) => {
+  const createSession = useCallback(async (data) => {
+    // 1. Persist to Supabase via REST (required for start-stream lookup)
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (authSession?.access_token) {
+        const res = await fetch(`${SOCKET_URL}/api/sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authSession.access_token}`,
+          },
+          body: JSON.stringify(data),
+        });
+        if (res.ok) {
+          const sessionData = await res.json();
+          if (sessionData?.qrCode) setQrCode(sessionData.qrCode);
+          // 2. Also join socket room so teacher gets live events
+          socketRef.current?.emit('create_session', data, () => {});
+          return sessionData; // { id, code, topic, qrCode, ... }
+        }
+      }
+    } catch (err) {
+      console.error('REST createSession failed, falling back to socket', err);
+    }
+
+    // Fallback: socket-only (no Supabase, start-stream won't work but rest of app still functions)
     return new Promise((resolve) => {
       socketRef.current?.emit('create_session', data, (response) => {
         if (response?.qrCode) setQrCode(response.qrCode);
@@ -86,6 +111,7 @@ export default function useSocket(sessionCode) {
       });
     });
   }, []);
+
 
   const startSession = useCallback((code) => {
     return new Promise((resolve) => {
