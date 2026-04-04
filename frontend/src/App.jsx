@@ -6,6 +6,8 @@ import SessionLibrary from './pages/SessionLibrary';
 import SessionLobby from './pages/SessionLobby';
 import LiveDashboard from './pages/LiveDashboard';
 import PostSessionAnalytics from './pages/PostSessionAnalytics';
+import Materials from './pages/Materials';
+import AITutor from './pages/AITutor';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -33,6 +35,8 @@ export default function App() {
           <Route path="/lobby/:code" element={<ProtectedRoute><SessionLobby /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><LiveDashboard /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><PostSessionAnalytics /></ProtectedRoute>} />
+          <Route path="/materials" element={<ProtectedRoute><Materials /></ProtectedRoute>} />
+          <Route path="/ai-tutor" element={<ProtectedRoute><AITutor /></ProtectedRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
