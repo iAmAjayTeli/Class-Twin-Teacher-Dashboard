@@ -1,6 +1,7 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useState, createContext, useContext } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 // Shared context so pages can read collapsed state if needed
 export const SidebarContext = createContext({ collapsed: false });
@@ -8,9 +9,30 @@ export const useSidebar = () => useContext(SidebarContext);
 
 export default function Sidebar({ onStartSession }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
+  const [liveSession, setLiveSession] = useState(null); // { id, join_code }
+
+  // Check for active streaming sessions
+  useEffect(() => {
+    if (!user) return;
+    const checkLiveSession = async () => {
+      const { data } = await supabase
+        .from('sessions')
+        .select('id, join_code, topic, is_streaming')
+        .eq('created_by', user.id)
+        .eq('is_streaming', true)
+        .limit(1)
+        .single();
+      setLiveSession(data || null);
+    };
+    checkLiveSession();
+    // Re-check when navigating between pages
+    const interval = setInterval(checkLiveSession, 5000);
+    return () => clearInterval(interval);
+  }, [user, location.pathname]);
 
   const handleLogout = async () => {
     await signOut();
@@ -200,6 +222,46 @@ export default function Sidebar({ onStartSession }) {
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {menuItems.map(renderNavItem)}
         </nav>
+
+        {/* Back to Live Session banner */}
+        {liveSession && !location.pathname.startsWith('/lobby') && (
+          <div
+            onClick={() => navigate(`/lobby/${liveSession.join_code}?sessionId=${liveSession.id}`)}
+            style={{
+              margin: collapsed ? '8px 0' : '10px 0',
+              padding: collapsed ? '10px 0' : '12px 14px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #FEE2E2, #FECACA)',
+              border: '1px solid #FECACA',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: collapsed ? 'center' : 'flex-start',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: collapsed ? '0' : '10px',
+              flexDirection: collapsed ? 'column' : 'row',
+              transition: 'all 0.2s ease',
+              animation: 'pulse-glow 2s ease-in-out infinite',
+            }}
+            title={collapsed ? 'Back to Live Session' : undefined}
+          >
+            <span style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              backgroundColor: '#EF4444',
+              animation: 'pulse-glow 1.5s ease-in-out infinite',
+              flexShrink: 0, marginTop: collapsed ? 0 : '4px',
+            }} />
+            {!collapsed && (
+              <div>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#DC2626', margin: 0, lineHeight: 1.3 }}>
+                  Live Session Active
+                </p>
+                <p style={{ fontSize: '10px', color: '#B91C1C', margin: '2px 0 0', fontWeight: 500 }}>
+                  Tap to return →
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Spacer */}
         <div style={{ flex: 1, minHeight: '20px' }} />

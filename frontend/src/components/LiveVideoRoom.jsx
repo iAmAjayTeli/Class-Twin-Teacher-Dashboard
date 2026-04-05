@@ -1,13 +1,12 @@
 // LiveVideoRoom — Teacher's live video call UI powered by LiveKit
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   LiveKitRoom,
   VideoTrack,
   useLocalParticipant,
   useTracks,
   useRemoteParticipants,
-  TrackToggle,
   DisconnectButton,
   RoomAudioRenderer,
 } from '@livekit/components-react';
@@ -21,9 +20,65 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
   const [isCamOn, setIsCamOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [participantCount, setParticipantCount] = useState(1);
+  const localVideoRef = useRef(null);
+  const [hasLivekitTrack, setHasLivekitTrack] = useState(false);
 
   const [nameCache, setNameCache] = useState({});
+
+  // ─── Use LiveKit's own camera track from localParticipant ─────────────
+  const cameraTracks = useTracks(
+    [{ source: Track.Source.Camera, withPlaceholder: true }],
+    { onlySubscribed: false }
+  );
+  const localCameraTrack = cameraTracks.find(t => t.participant?.isLocal);
+
+  const screenTracks = useTracks(
+    [{ source: Track.Source.ScreenShare, withPlaceholder: false }],
+    { onlySubscribed: false }
+  );
+  const localScreenTrack = screenTracks.find(t => t.participant?.isLocal);
+
+  // Track whether LK has published the camera track yet
+  useEffect(() => {
+    const track = localCameraTrack?.publication?.track;
+    setHasLivekitTrack(!!track);
+  }, [localCameraTrack?.publication?.track]);
+
+  // ─── Fallback: direct getUserMedia ONLY when LiveKit hasn't published yet ──
+  useEffect(() => {
+    // If LiveKit already has the track, don't do getUserMedia
+    if (hasLivekitTrack || !isCamOn) {
+      // Clear any previous fallback stream from the ref
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
+      return;
+    }
+
+    let cancelled = false;
+    let stream = null;
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(s => {
+        if (cancelled) {
+          s.getTracks().forEach(t => t.stop());
+          return;
+        }
+        stream = s;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = s;
+        }
+      })
+      .catch(err => console.warn('Camera fallback preview failed:', err));
+
+    return () => {
+      cancelled = true;
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
+    };
+  }, [hasLivekitTrack, isCamOn]);
 
   // Resolve student names from DB when participants change
   useEffect(() => {
@@ -33,33 +88,23 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
     }
 
     const identities = remoteParticipants.map(p => p.identity);
-    // Find UUIDs that need resolving (not already cached)
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
     const unresolvedIds = identities.filter(id => uuidPattern.test(id) && !nameCache[id]);
 
     const buildViewers = (resolvedNames) => {
       return remoteParticipants.map((p, idx) => {
         let displayName = p.name;
-
-        // Check DB-resolved name
-        if (!displayName && resolvedNames[p.identity]) {
-          displayName = resolvedNames[p.identity];
-        }
-
-        // Try metadata
+        if (!displayName && resolvedNames[p.identity]) displayName = resolvedNames[p.identity];
         if (!displayName && p.metadata) {
           try {
             const meta = JSON.parse(p.metadata);
             displayName = meta.studentName || meta.name || meta.displayName || '';
-          } catch (_) { /* not JSON */ }
+          } catch (_) { }
         }
-
-        // Clean up identity as fallback
         if (!displayName) {
           let cleaned = p.identity.replace(/^student-/i, '').replace(/^viewer-/i, '');
           displayName = uuidPattern.test(cleaned) ? `Student ${idx + 1}` : cleaned;
         }
-
         return { id: p.identity, name: displayName, joinedAt: new Date().toISOString() };
       });
     };
@@ -77,26 +122,11 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
           setNameCache(merged);
           onParticipantsChange(buildViewers(merged));
         })
-        .catch(() => {
-          onParticipantsChange(buildViewers(nameCache));
-        });
+        .catch(() => onParticipantsChange(buildViewers(nameCache)));
     } else {
       onParticipantsChange(buildViewers(nameCache));
     }
   }, [remoteParticipants, onParticipantsChange]);
-
-  const cameraTracks = useTracks(
-    [{ source: Track.Source.Camera, withPlaceholder: true }],
-    { onlySubscribed: false }
-  );
-
-  const screenTracks = useTracks(
-    [{ source: Track.Source.ScreenShare, withPlaceholder: false }],
-    { onlySubscribed: false }
-  );
-
-  const localCameraTrack = cameraTracks.find(t => t.participant?.isLocal);
-  const localScreenTrack = screenTracks.find(t => t.participant?.isLocal);
 
   const toggleScreenShare = useCallback(async () => {
     if (isScreenSharing) {
@@ -107,6 +137,60 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
       setIsScreenSharing(true);
     }
   }, [isScreenSharing, localParticipant]);
+
+  // ─── Determine what to show in the video area ────────────────────────
+  const renderVideoContent = () => {
+    // Priority 1: Screen share
+    if (localScreenTrack?.publication?.track) {
+      return (
+        <VideoTrack
+          trackRef={localScreenTrack}
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        />
+      );
+    }
+
+    // Priority 2: LiveKit camera track (once published)
+    if (hasLivekitTrack && localCameraTrack) {
+      return (
+        <VideoTrack
+          trackRef={localCameraTrack}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      );
+    }
+
+    // Priority 3: getUserMedia fallback (before LK publishes)
+    if (isCamOn) {
+      return (
+        <video
+          ref={localVideoRef}
+          autoPlay
+          muted
+          playsInline
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+        />
+      );
+    }
+
+    // Camera off
+    return (
+      <div style={{
+        width: '100%', height: '100%',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '12px',
+      }}>
+        <div style={{
+          width: '80px', height: '80px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, rgba(192, 193, 255, 0.2), rgba(74, 225, 118, 0.2))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '40px', color: 'var(--primary)' }}>videocam_off</span>
+        </div>
+        <p style={{ color: 'rgba(224, 226, 234, 0.5)', fontSize: '13px' }}>Camera is off</p>
+      </div>
+    );
+  };
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -123,33 +207,7 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
         border: '1px solid rgba(192, 193, 255, 0.15)',
         boxShadow: '0 0 40px rgba(99, 102, 241, 0.2)',
       }}>
-        {/* Screen share takes priority, else camera */}
-        {localScreenTrack?.publication?.track ? (
-          <VideoTrack
-            trackRef={localScreenTrack}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
-        ) : localCameraTrack?.publication?.track ? (
-          <VideoTrack
-            trackRef={localCameraTrack}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{
-            width: '100%', height: '100%',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: '12px',
-          }}>
-            <div style={{
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(192, 193, 255, 0.2), rgba(74, 225, 118, 0.2))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '40px', color: 'var(--primary)' }}>videocam_off</span>
-            </div>
-            <p style={{ color: 'rgba(224, 226, 234, 0.5)', fontSize: '13px' }}>Camera is off</p>
-          </div>
-        )}
+        {renderVideoContent()}
 
         {/* LIVE badge */}
         <div style={{
@@ -163,10 +221,25 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
           <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#fff' }}>LIVE</span>
         </div>
 
+        {/* Student count overlay */}
+        {remoteParticipants.length > 0 && (
+          <div style={{
+            position: 'absolute', top: '12px', right: '12px',
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '4px 12px', borderRadius: '999px',
+            backgroundColor: 'rgba(11, 15, 20, 0.7)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(192, 193, 255, 0.15)',
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#4ae176' }}>group</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{remoteParticipants.length} watching</span>
+          </div>
+        )}
+
         {/* Screen share badge */}
         {isScreenSharing && (
           <div style={{
-            position: 'absolute', top: '12px', right: '12px',
+            position: 'absolute', bottom: '12px', left: '12px',
             padding: '4px 12px', borderRadius: '999px',
             backgroundColor: 'rgba(74, 225, 118, 0.2)',
             border: '1px solid rgba(74, 225, 118, 0.4)',
@@ -187,11 +260,6 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
         border: '1px solid rgba(99, 102, 241, 0.15)',
       }}>
         {/* Mic toggle */}
-        <TrackToggle
-          source={Track.Source.Microphone}
-          onChange={(enabled) => setIsMicOn(enabled)}
-          style={{ /* hide default track toggle UI, we override below */ display: 'none' }}
-        />
         <button
           onClick={() => {
             localParticipant.setMicrophoneEnabled(!isMicOn);
@@ -214,8 +282,10 @@ function VideoConferenceInner({ onDisconnect, onParticipantsChange }) {
         {/* Camera toggle */}
         <button
           onClick={() => {
-            localParticipant.setCameraEnabled(!isCamOn);
-            setIsCamOn(v => !v);
+            const next = !isCamOn;
+            localParticipant.setCameraEnabled(next);
+            setIsCamOn(next);
+            if (!next) setHasLivekitTrack(false);
           }}
           title={isCamOn ? 'Turn off camera' : 'Turn on camera'}
           style={{

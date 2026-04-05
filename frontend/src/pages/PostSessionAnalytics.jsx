@@ -234,7 +234,8 @@ export default function PostSessionAnalytics() {
 
             {/* TAB 2: ATTENDANCE & BEHAVIOR */}
             {activeTab === 'attendance' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 <div style={glassStyle}>
                   <h3 className="font-headline" style={{ fontSize: '20px', marginBottom: '24px' }}>Weekly Attendance Trend</h3>
                   <div style={{ height: '350px' }}>
@@ -267,6 +268,51 @@ export default function PostSessionAnalytics() {
                       </RadarChart>
                     </ResponsiveContainer>
                   </div>
+                </div>
+                </div>
+
+                {/* Real Attendees of Latest Session */}
+                <div style={glassStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                    <h3 className="font-headline" style={{ fontSize: '20px' }}>Latest Session Attendees</h3>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A5C3B', backgroundColor: '#E8F5EE', padding: '6px 16px', borderRadius: '20px' }}>
+                      {realStats.length > 0 && realStats[0].session_students ? realStats[0].session_students.length : 0} student(s) joined
+                    </span>
+                  </div>
+                  {realStats.length > 0 && realStats[0].session_students?.length > 0 ? (
+                    <div style={{ border: '1px solid #EAECF0', borderRadius: '12px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid #EAECF0' }}>
+                          <tr>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', color: '#6B7280', fontWeight: 600, textTransform: 'uppercase' }}>Student Name</th>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', color: '#6B7280', fontWeight: 600, textTransform: 'uppercase' }}>Join Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {realStats[0].session_students.map((student, i) => (
+                            <tr key={i} style={{ borderBottom: i !== realStats[0].session_students.length - 1 ? '1px solid #EAECF0' : 'none', backgroundColor: '#fff' }}>
+                              <td style={{ padding: '16px 20px', fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#F3F4F6', color: '#4B5563', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px' }}>
+                                    {student.student_name ? student.student_name.charAt(0).toUpperCase() : '?'}
+                                  </div>
+                                  {student.student_name || 'Unknown'}
+                                </div>
+                              </td>
+                              <td style={{ padding: '16px 20px', fontSize: '14px', color: '#6B7280' }}>
+                                {student.joined_at ? new Date(student.joined_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#F9FAFB', borderRadius: '12px', border: '1px dashed #D1D5DB' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '32px', color: '#9CA3AF', marginBottom: '12px' }}>group_off</span>
+                      <p style={{ fontSize: '14px', color: '#6B7280', fontWeight: 500 }}>No students recorded for the most recent session.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -15,6 +15,7 @@ export default function useSocket(sessionCode) {
   const [qrCode, setQrCode] = useState(null);
   const [classHealth, setClassHealth] = useState(null);
   const [quizResults, setQuizResults] = useState({});
+  const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
     async function connectSocket() {
@@ -34,61 +35,67 @@ export default function useSocket(sessionCode) {
 
       socketRef.current = socket;
 
-    socket.on('connect', () => {
-      console.log('🔌 Connected to ClassTwin server');
-      setConnected(true);
-      // Auto-join teacher room if we have a session code
-      if (sessionCode) {
-        socket.emit('join_teacher_room', { code: sessionCode }, (res) => {
-          console.log(`🏫 Joined teacher room for ${sessionCode}:`, res);
-        });
-      }
-    });
-
-    socket.on('disconnect', () => {
-      console.log('🔌 Disconnected from ClassTwin server');
-      setConnected(false);
-    });
-
-    socket.on('student_joined', (data) => {
-      setStudents(prev => {
-        const exists = prev.find(s => s.id === data.student.id);
-        if (exists) return prev;
-        return [...prev, data.student];
+      socket.on('connect', () => {
+        console.log('🔌 Connected to ClassTwin server');
+        setConnected(true);
+        if (sessionCode) {
+          socket.emit('join_teacher_room', { code: sessionCode }, (res) => {
+            console.log(`🏫 Joined teacher room for ${sessionCode}:`, res);
+            if (res?.students && res.students.length > 0) {
+              setStudents(res.students);
+            }
+          });
+        }
       });
-    });
 
-    socket.on('twin_update', (data) => {
-      setTwinData(data);
-      if (data.aiInsight) setAiInsight(data.aiInsight);
-      if (data.students) setStudents(data.students);
-      if (data.classHealth !== undefined) setClassHealth(data.classHealth);
-    });
+      socket.on('disconnect', () => {
+        console.log('🔌 Disconnected from ClassTwin server');
+        setConnected(false);
+      });
 
-    socket.on('round_start', (data) => {
-      setCurrentRound(data);
-    });
+      socket.on('student_joined', (data) => {
+        setStudents(prev => {
+          const exists = prev.find(s => s.id === data.student.id);
+          if (exists) return prev;
+          return [...prev, data.student];
+        });
+      });
 
-    socket.on('session_ended', () => {
-      setSessionEnded(true);
-    });
+      socket.on('twin_update', (data) => {
+        setTwinData(data);
+        if (data.aiInsight) setAiInsight(data.aiInsight);
+        if (data.students) setStudents(data.students);
+        if (data.classHealth !== undefined) setClassHealth(data.classHealth);
+      });
 
-    socket.on('qr_code', (data) => {
-      setQrCode(data.qrCode);
-    });
+      socket.on('round_start', (data) => {
+        setCurrentRound(data);
+      });
 
-    socket.on('quiz_results_update', (data) => {
-      setQuizResults(prev => ({
-        ...prev,
-        [data.questionId]: {
-          totalResponses: data.totalResponses,
-          correctCount: data.correctCount,
-          incorrectCount: data.incorrectCount,
-          correctPercent: data.correctPercent,
-          latestAnswer: data.latestAnswer,
-        },
-      }));
-    });
+      socket.on('session_ended', () => {
+        setSessionEnded(true);
+      });
+
+      socket.on('qr_code', (data) => {
+        setQrCode(data.qrCode);
+      });
+
+      socket.on('quiz_results_update', (data) => {
+        setQuizResults(prev => ({
+          ...prev,
+          [data.questionId]: {
+            totalResponses: data.totalResponses,
+            correctCount: data.correctCount,
+            incorrectCount: data.incorrectCount,
+            correctPercent: data.correctPercent,
+            latestAnswer: data.latestAnswer,
+          },
+        }));
+      });
+
+      socket.on('leaderboard_update', (data) => {
+        setLeaderboard(data);
+      });
     }
 
     connectSocket();
@@ -116,7 +123,7 @@ export default function useSocket(sessionCode) {
           if (sessionData?.qrCode) setQrCode(sessionData.qrCode);
           // Join the teacher socket room for the session code (don't create a duplicate)
           if (sessionData?.code) {
-            socketRef.current?.emit('join_teacher_room', { code: sessionData.code }, () => {});
+            socketRef.current?.emit('join_teacher_room', { code: sessionData.code }, () => { });
           }
           return sessionData; // { id, code, topic, qrCode, ... }
         }
@@ -164,6 +171,7 @@ export default function useSocket(sessionCode) {
     qrCode,
     classHealth,
     quizResults,
+    leaderboard,
     createSession,
     startSession,
     nextRound,
@@ -173,5 +181,6 @@ export default function useSocket(sessionCode) {
     setAiInsight,
     setSessionEnded,
     setQuizResults,
+    setLeaderboard,
   };
 }

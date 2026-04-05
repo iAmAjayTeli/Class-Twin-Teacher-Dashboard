@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SessionLibrary from './pages/SessionLibrary';
 import SessionLobby from './pages/SessionLobby';
+import LiveDashboard from './pages/LiveDashboard';
 import StudentsPage from './pages/StudentsPage';
 import StudentDetailPage from './pages/StudentDetailPage';
 import PostSessionAnalytics from './pages/PostSessionAnalytics';
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sessions" element={<ProtectedRoute><SessionLibrary /></ProtectedRoute>} />
           <Route path="/lobby/:code" element={<ProtectedRoute><SessionLobby /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><LiveDashboard /></ProtectedRoute>} />
           <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
           <Route path="/students/:studentName" element={<ProtectedRoute><StudentDetailPage /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><PostSessionAnalytics /></ProtectedRoute>} />

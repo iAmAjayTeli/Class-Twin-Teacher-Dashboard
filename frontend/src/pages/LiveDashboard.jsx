@@ -20,11 +20,11 @@ const mockStudents = [
   { id: 12, name: 'Ruby K.', status: 'neutral', label: 'Student 12' },
 ];
 
-const statusColors = {
-  understood: { dot: 'var(--secondary)', shadow: '0 0 10px #4ae176', border: 'rgba(74, 225, 118, 0.3)', hoverShadow: '0 0 20px rgba(74, 225, 118, 0.2)' },
-  confused: { dot: 'var(--error)', shadow: '0 0 10px #ffb4ab', border: 'rgba(255, 180, 171, 0.3)', hoverShadow: '0 0 20px rgba(255, 180, 171, 0.2)' },
-  partial: { dot: 'var(--tertiary)', shadow: '0 0 10px #ffb95f', border: 'rgba(255, 185, 95, 0.3)', hoverShadow: '0 0 20px rgba(255, 185, 95, 0.2)' },
-  neutral: { dot: 'var(--surface-container-highest)', shadow: 'none', border: 'rgba(70, 69, 84, 0.3)', hoverShadow: 'none' },
+const statusConfig = {
+  understood: { bg: '#E8F5EE', border: 'rgba(26,92,59,0.25)', dot: '#1A5C3B', label: 'Understood' },
+  confused:   { bg: '#FEE2E2', border: 'rgba(239,68,68,0.25)',  dot: '#EF4444', label: 'Confused' },
+  partial:    { bg: '#FEF3C7', border: 'rgba(245,158,11,0.25)', dot: '#F59E0B', label: 'Partial' },
+  neutral:    { bg: '#F9FAFB', border: '#E5E7EB',                dot: '#9CA3AF', label: 'Neutral' },
 };
 
 export default function LiveDashboard() {
@@ -32,7 +32,7 @@ export default function LiveDashboard() {
   const navigate = useNavigate();
   const sessionCode = params.get('code') || 'ABC123';
   const sessionId   = params.get('sessionId') || null;
-  const { students: liveStudents, aiInsight, classHealth } = useSocket(sessionCode);
+  const { students: liveStudents, aiInsight, classHealth, leaderboard } = useSocket(sessionCode);
   const { token, livekitUrl, stopStream } = useLiveKit();
   const [elapsed, setElapsed] = useState(0);
   const [pipCollapsed, setPipCollapsed] = useState(false);
@@ -50,283 +50,237 @@ export default function LiveDashboard() {
     return `${m}:${sec}`;
   };
 
+  const understood = students.filter(s => s.status === 'understood').length;
+  const confused   = students.filter(s => s.status === 'confused').length;
+  const partial    = students.filter(s => s.status === 'partial').length;
+  const comprehension = students.length > 0 ? Math.round((understood / students.length) * 100) : classHealth || 75;
+
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--background)' }}>
       <Sidebar />
-      <div style={{ flex: 1, height: '100vh', overflowY: 'auto', backgroundColor: '#0b0f14', backgroundImage: 'radial-gradient(at 0% 0%, rgba(128, 131, 255, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(74, 225, 118, 0.05) 0px, transparent 50%)', position: 'relative' }}>
-      {/* Top NavBar */}
-      <nav style={{
-        position: 'sticky', top: 0, width: '100%', zIndex: 50,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '16px 24px',
-        backgroundColor: 'rgba(24, 28, 33, 0.6)',
-        backdropFilter: 'blur(30px)',
-        borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <span className="font-headline" style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.03em', color: '#e0e2ea' }}>ClassTwin</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span className="font-headline" style={{ color: '#a5b4fc', fontWeight: 600, letterSpacing: '-0.01em' }}>Question 2 of 5</span>
-            <div style={{ height: '4px', width: '96px', backgroundColor: 'var(--surface-container-highest)', borderRadius: '999px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: '40%', backgroundColor: 'var(--primary-container)' }} />
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '6px 12px', borderRadius: '999px',
-            backgroundColor: 'var(--surface-container-low)', border: '1px solid rgba(70, 69, 84, 0.2)',
-          }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error)', animation: 'pulse-glow 2s ease-in-out infinite' }} />
-            <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)' }}>Live Responses: {students.length}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="material-symbols-outlined" style={{ color: '#818cf8' }}>timer</span>
-            <span className="font-headline" style={{ fontWeight: 500 }}>{formatTime(elapsed)}</span>
-          </div>
-          <span className="material-symbols-outlined" style={{ color: 'rgba(224, 226, 234, 0.6)' }}>sensors</span>
-          <button onClick={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} style={{
-            padding: '8px 20px', borderRadius: '999px',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
-            color: '#ef4444', fontSize: '14px', fontWeight: 600,
-            background: 'rgba(220,38,38,0.08)', cursor: 'pointer',
-            transition: 'all 0.3s',
-          }}>End Session</button>
-        </div>
-      </nav>
+      <div style={{ flex: 1, height: '100vh', overflowY: 'auto', backgroundColor: 'var(--background)', color: 'var(--on-surface)' }}>
 
-      {/* Main Content */}
-      <main style={{ padding: '24px 32px 128px', display: 'flex', gap: '32px' }}>
-        {/* Left: Heatmap Grid */}
-        <section style={{ flexGrow: 1 }}>
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px',
-            height: '100%', alignContent: 'start', overflowY: 'auto', paddingRight: '8px',
-          }}>
-            {students.map((student) => {
-              const sc = statusColors[student.status] || statusColors.neutral;
-              return (
-                <div key={student.id} className="prism-glass" style={{
-                  padding: '16px', borderRadius: '16px', aspectRatio: '1',
-                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  transition: 'all 0.3s', cursor: 'default',
-                }}
-                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = sc.hoverShadow; }}
-                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden',
-                      border: `1px solid ${sc.border}`,
-                      backgroundColor: 'var(--surface-container-high)',
-                    }} />
-                    <span style={{
-                      width: '12px', height: '12px', borderRadius: '50%',
-                      backgroundColor: sc.dot, boxShadow: sc.shadow,
-                    }} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '12px', color: 'rgba(224, 226, 234, 0.6)' }}>{student.label || `Student ${String(student.id).padStart(2, '0')}`}</p>
-                    <p style={{ fontSize: '14px', fontWeight: 600 }}>{student.name}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Right: AI Insight Panel */}
-        <aside style={{ width: '420px', minWidth: '420px', display: 'flex', flexDirection: 'column', gap: '24px', height: '100%', overflowY: 'auto', paddingRight: '8px' }}>
-          {/* Class Comprehension Ring */}
-          <div className="prism-glass" style={{ padding: '24px', borderRadius: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '128px', height: '128px', background: 'rgba(192, 193, 255, 0.1)', filter: 'blur(60px)', borderRadius: '50%' }} />
-            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(224, 226, 234, 0.6)', marginBottom: '24px' }}>Class Comprehension</h3>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: '16px 0' }}>
-              <svg width="160" height="160" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="80" cy="80" r="70" fill="transparent" stroke="var(--surface-container-highest)" strokeWidth="8" />
-                <circle cx="80" cy="80" r="70" fill="transparent" stroke="url(#compGradient)" strokeWidth="12" strokeDasharray="440" strokeDashoffset="110" strokeLinecap="round" />
-                <defs>
-                  <linearGradient id="compGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#c0c1ff" />
-                    <stop offset="100%" stopColor="#4ae176" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <span className="font-headline" style={{ fontSize: '36px', fontWeight: 800 }}>{classHealth || 75}%</span>
-                <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '-0.01em', color: 'var(--secondary)' }}>Strong Pulse</span>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Action Card */}
-          <div className="prism-glass refraction-edge" style={{ padding: '24px', borderRadius: '24px', position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', position: 'relative' }}>
-              <div style={{ padding: '12px', borderRadius: '16px', backgroundColor: 'rgba(192, 193, 255, 0.1)' }}>
-                <span className="material-symbols-outlined filled" style={{ color: 'var(--primary)' }}>psychology</span>
-              </div>
-              <div style={{ flexGrow: 1 }}>
-                <h4 style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary)', marginBottom: '8px' }}>AI Action</h4>
-                <p className="font-headline" style={{ fontSize: '18px', fontWeight: 700, lineHeight: 1.3, marginBottom: '16px' }}>
-                  {aiInsight || 'Revisit recursion base case — multiple students are struggling'}
-                </p>
-                <button style={{
-                  width: '100%', padding: '12px', borderRadius: '16px',
-                  backgroundColor: 'var(--primary-container)', color: 'var(--on-primary-container)',
-                  fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  transition: 'filter 0.2s',
-                }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>check_circle</span>
-                  Mark as Done
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Confusion Hotspot */}
-          <div className="prism-glass" style={{ padding: '24px', borderRadius: '24px', borderLeft: '4px solid var(--tertiary)' }}>
-            <h4 style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--tertiary)', marginBottom: '16px' }}>Confusion Hotspot</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{
-                padding: '12px', borderRadius: '16px', borderTopLeftRadius: '0',
-                backgroundColor: 'rgba(38, 42, 48, 0.6)', backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(70, 69, 84, 0.1)', fontSize: '14px', fontStyle: 'italic',
-              }}>
-                "I don't get why the function calls itself..."
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 8px' }}>
-                <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'rgba(255, 180, 171, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--error)' }} />
-                </div>
-                <span style={{ fontSize: '10px', color: 'rgba(224, 226, 234, 0.4)' }}>3 similar queries flagged</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Next Question */}
-          <div className="prism-glass" style={{ padding: '24px', borderRadius: '24px', backgroundColor: 'rgba(38, 42, 48, 0.4)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span className="font-headline" style={{ fontWeight: 700, fontSize: '14px' }}>Up Next: Recursive Steps</span>
-              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(192, 193, 255, 0.2)', color: 'var(--primary)' }}>ADVANCED</span>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={{
-                flex: 1, padding: '12px', borderRadius: '12px',
-                backgroundColor: 'var(--surface-bright)', color: 'var(--on-surface)',
-                fontWeight: 600, fontSize: '14px', border: 'none', cursor: 'pointer',
-              }}>Modify Quest</button>
-              <button style={{
-                flex: 1, padding: '12px', borderRadius: '12px',
-                background: 'linear-gradient(to right, var(--primary), var(--inverse-primary))',
-                color: 'var(--on-primary)', fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
-                boxShadow: '0 0 20px rgba(192, 193, 255, 0.3)',
-              }}>Release Now</button>
-            </div>
-          </div>
-        </aside>
-      </main>
-
-      {/* Bottom Stats Bar */}
-      <div style={{
-        position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)', zIndex: 50,
-        display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '8px',
-        backgroundColor: 'rgba(28, 32, 37, 0.4)',
-        backdropFilter: 'blur(40px)',
-        borderRadius: '999px',
-        border: '1px solid rgba(99, 102, 241, 0.15)',
-        boxShadow: '0 0 40px rgba(99, 102, 241, 0.15)',
-      }}>
-        {[
-          { icon: 'group', label: 'Students', value: `${students.length}/34` },
-          null,
-          { icon: 'psychology', label: 'Comprehension', active: true },
-          null,
-          { icon: 'schedule', label: 'Duration', value: `00:${formatTime(elapsed)}` },
-          null,
-          { icon: 'speed', label: 'Speed', value: '1.4s Avg' },
-        ].map((item, i) => {
-          if (!item) return <div key={i} style={{ height: '24px', width: '1px', backgroundColor: 'rgba(70, 69, 84, 0.2)' }} />;
-          return (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 24px',
-              ...(item.active ? { backgroundColor: 'rgba(99, 102, 241, 0.1)', borderRadius: '999px', flexDirection: 'column', color: '#a5b4fc' } : {}),
-            }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#818cf8' }}>{item.icon}</span>
-              {item.active ? (
-                <span style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Comprehension</span>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(224, 226, 234, 0.4)' }}>{item.label}</span>
-                  <span className="font-headline" style={{ fontSize: '12px', fontWeight: 700 }}>{item.value}</span>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Floating PiP Video Panel */}
-      {token && livekitUrl && (
-        <div style={{
-          position: 'fixed',
-          bottom: '100px',
-          right: '32px',
-          zIndex: 60,
-          width: pipCollapsed ? '56px' : '300px',
-          backgroundColor: 'rgba(11, 15, 20, 0.95)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '20px',
-          border: '1px solid rgba(99, 102, 241, 0.25)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1)',
-          overflow: 'hidden',
-          transition: 'width 0.3s ease',
+        {/* Top NavBar */}
+        <nav style={{
+          position: 'sticky', top: 0, width: '100%', zIndex: 50,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '14px 28px',
+          backgroundColor: 'var(--surface)',
+          borderBottom: '1px solid var(--outline)',
+          boxShadow: 'var(--shadow-xs)',
         }}>
-          {/* PiP header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: pipCollapsed ? '12px' : '10px 14px',
-            borderBottom: pipCollapsed ? 'none' : '1px solid rgba(99,102,241,0.15)',
-          }}>
-            {!pipCollapsed && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', animation: 'pulse-glow 1.5s ease-in-out infinite' }} />
-                <span style={{ fontSize: '10px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.08em' }}>LIVE STREAM</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--on-surface)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>ClassTwin</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '14px' }}>Live Session</span>
+              <div style={{ height: '4px', width: '80px', backgroundColor: 'var(--outline)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '40%', backgroundColor: 'var(--primary)' }} />
               </div>
-            )}
-            <button
-              onClick={() => setPipCollapsed(v => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', display: 'flex', alignItems: 'center', marginLeft: pipCollapsed ? 0 : 'auto' }}
-              title={pipCollapsed ? 'Expand' : 'Collapse'}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                {pipCollapsed ? 'videocam' : 'picture_in_picture'}
-              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* LIVE badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '999px', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#EF4444', animation: 'pulse-glow 2s ease-in-out infinite' }} />
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#DC2626', fontWeight: 700 }}>Live · {students.length} students</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: '18px' }}>timer</span>
+              <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--on-surface)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{formatTime(elapsed)}</span>
+            </div>
+            <button onClick={() => navigate(`/lobby/${sessionCode}?sessionId=${sessionId || ''}`)} style={{
+              padding: '7px 18px', borderRadius: '999px',
+              border: '1px solid rgba(26,92,59,0.25)', color: '#1A5C3B', fontSize: '13px', fontWeight: 600,
+              background: '#E8F5EE', cursor: 'pointer', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_back</span>
+              Back to Lobby
+            </button>
+            <button onClick={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} style={{
+              padding: '7px 18px', borderRadius: '999px',
+              border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: 600,
+              background: '#FEE2E2', cursor: 'pointer', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>call_end</span>
+              End Session
             </button>
           </div>
+        </nav>
 
-          {/* PiP video body */}
-          {!pipCollapsed && (
-            <div style={{ padding: '12px', height: '220px' }}>
-              <LiveVideoRoom
-                token={token}
-                serverUrl={livekitUrl}
-                onDisconnect={async () => {
-                  if (sessionId) await stopStream(sessionId);
-                  navigate('/analytics');
-                }}
-              />
+        {/* Main Content */}
+        <main style={{ padding: '24px 28px 100px', display: 'flex', gap: '24px' }}>
+
+          {/* Left: Student Heatmap Grid */}
+          <section style={{ flexGrow: 1 }}>
+            {/* Summary row */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              {[
+                { label: 'Total', value: students.length, color: 'var(--primary)', bg: 'var(--primary-light)' },
+                { label: 'Understood', value: understood, color: '#1A5C3B', bg: '#E8F5EE' },
+                { label: 'Confused', value: confused, color: '#DC2626', bg: '#FEE2E2' },
+                { label: 'Partial', value: partial, color: '#D97706', bg: '#FEF3C7' },
+              ].map(item => (
+                <div key={item.label} style={{ padding: '10px 16px', borderRadius: '12px', backgroundColor: item.bg, border: `1px solid ${item.color}22`, display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '20px', fontWeight: 800, color: item.color, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{item.value}</span>
+                  <span style={{ fontSize: '11px', color: item.color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</span>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Decorative Atmosphere */}
-      <div style={{ position: 'fixed', top: '20%', left: '10%', width: '30vw', height: '30vw', background: 'rgba(49, 46, 129, 0.1)', filter: 'blur(150px)', zIndex: -10, borderRadius: '50%' }} />
-      <div style={{ position: 'fixed', bottom: 0, right: 0, width: '40vw', height: '40vw', background: 'rgba(6, 78, 59, 0.05)', filter: 'blur(150px)', zIndex: -10, borderRadius: '50%' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', alignContent: 'start' }}>
+              {students.map((student) => {
+                const sc = statusConfig[student.status] || statusConfig.neutral;
+                return (
+                  <div key={student.id} style={{
+                    padding: '14px', borderRadius: '14px', aspectRatio: '1',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                    transition: 'all 0.25s', cursor: 'default',
+                    backgroundColor: sc.bg, border: `1px solid ${sc.border}`,
+                    boxShadow: 'var(--shadow-xs)',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                  onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-xs)'; }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'white', border: `1.5px solid ${sc.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 700, color: sc.dot }}>
+                        {student.name.charAt(0)}
+                      </div>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: sc.dot }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '11px', color: sc.dot, fontWeight: 600, marginBottom: '2px', opacity: 0.8 }}>{sc.label}</p>
+                      <p style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>{student.name}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Right: AI Panel */}
+          <aside style={{ width: '360px', minWidth: '360px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%' }}>
+
+            {/* Comprehension Ring */}
+            <div style={{ padding: '24px', borderRadius: '20px', backgroundColor: 'var(--surface)', border: '1px solid var(--outline)', boxShadow: 'var(--shadow-sm)', textAlign: 'center' }}>
+              <h3 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', marginBottom: '20px', fontWeight: 700 }}>Class Comprehension</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: '8px 0' }}>
+                <svg width="140" height="140" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="70" cy="70" r="58" fill="transparent" stroke="var(--outline)" strokeWidth="8" />
+                  <circle cx="70" cy="70" r="58" fill="transparent" stroke="var(--primary)" strokeWidth="10"
+                    strokeDasharray="364"
+                    strokeDashoffset={364 - (364 * comprehension / 100)}
+                    strokeLinecap="round" />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{comprehension}%</span>
+                  <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: comprehension >= 70 ? 'var(--primary)' : comprehension >= 40 ? '#D97706' : '#DC2626', fontWeight: 600 }}>
+                    {comprehension >= 70 ? 'Strong' : comprehension >= 40 ? 'Moderate' : 'Struggling'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Action Card */}
+            <div style={{ padding: '20px', borderRadius: '20px', backgroundColor: 'var(--surface)', border: '1px solid var(--outline)', boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                <div style={{ padding: '10px', borderRadius: '14px', backgroundColor: 'var(--primary-light)', flexShrink: 0 }}>
+                  <span className="material-symbols-outlined filled" style={{ color: 'var(--primary)', fontSize: '20px' }}>psychology</span>
+                </div>
+                <div style={{ flexGrow: 1 }}>
+                  <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary)', marginBottom: '8px', fontWeight: 700 }}>AI Action</h4>
+                  <p style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.4, marginBottom: '14px', color: 'var(--on-surface)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {aiInsight || 'Revisit recursion base case — multiple students are struggling'}
+                  </p>
+                  <button className="ct-btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '10px' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check_circle</span>
+                    Mark as Done
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Confusion Hotspot */}
+            {confused > 0 && (
+              <div style={{ padding: '18px', borderRadius: '16px', backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', boxShadow: 'var(--shadow-xs)' }}>
+                <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#92400E', marginBottom: '12px', fontWeight: 700 }}>⚠ Confusion Hotspot</h4>
+                <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'white', border: '1px solid #FDE68A', fontSize: '13px', fontStyle: 'italic', color: '#78350F', lineHeight: 1.5 }}>
+                  "{confused} student{confused !== 1 ? 's' : ''} flagged as confused — consider pausing and recapping."
+                </div>
+              </div>
+            )}
+
+            {/* Live Leaderboard */}
+            {leaderboard && leaderboard.length > 0 && (
+              <div style={{ padding: '20px', borderRadius: '20px', backgroundColor: 'var(--surface)', border: '1px solid var(--outline)', boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <span className="material-symbols-outlined filled" style={{ color: '#F59E0B', fontSize: '20px' }}>trophy</span>
+                  <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary)', fontWeight: 700, margin: 0 }}>Live Leaderboard</h4>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {leaderboard.slice(0, 5).map((l, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '12px', backgroundColor: i === 0 ? '#FFFBEB' : 'var(--surface)', border: i === 0 ? '1px solid #FDE68A' : '1px solid var(--outline)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 800, fontSize: '13px', color: i === 0 ? '#F59E0B' : 'var(--on-surface-variant)', width: '16px' }}>{i + 1}.</span>
+                        <span style={{ fontWeight: 600, fontSize: '13px', color: '#111827', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{l.name}</span>
+                      </div>
+                      <span style={{ fontWeight: 800, fontSize: '13px', color: 'var(--primary)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{l.score} pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Stats summary */}
+            <div style={{ padding: '16px', borderRadius: '16px', backgroundColor: 'var(--surface)', border: '1px solid var(--outline)', boxShadow: 'var(--shadow-xs)' }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Session Stats</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { label: 'Duration', value: formatTime(elapsed), icon: 'schedule' },
+                  { label: 'Students', value: `${students.length}`, icon: 'group' },
+                  { label: 'Comprehension', value: `${comprehension}%`, icon: 'trending_up' },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--outline)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--primary)' }}>{item.icon}</span>
+                      <span style={{ fontSize: '13px', color: 'var(--on-surface-variant)' }}>{item.label}</span>
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--on-surface)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </main>
+
+        {/* Floating PiP Video Panel */}
+        {token && livekitUrl && (
+          <div style={{
+            position: 'fixed', bottom: '24px', right: '24px', zIndex: 60,
+            width: pipCollapsed ? '52px' : '280px',
+            backgroundColor: 'var(--surface)', border: '1px solid var(--outline)',
+            borderRadius: '18px', boxShadow: 'var(--shadow-lg)',
+            overflow: 'hidden', transition: 'width 0.3s ease',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: pipCollapsed ? '10px' : '10px 14px', borderBottom: pipCollapsed ? 'none' : '1px solid var(--outline)' }}>
+              {!pipCollapsed && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EF4444', animation: 'pulse-glow 1.5s ease-in-out infinite' }} />
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#DC2626', letterSpacing: '0.06em' }}>LIVE STREAM</span>
+                </div>
+              )}
+              <button onClick={() => setPipCollapsed(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', display: 'flex', alignItems: 'center', marginLeft: pipCollapsed ? 0 : 'auto' }} title={pipCollapsed ? 'Expand' : 'Collapse'}>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{pipCollapsed ? 'videocam' : 'picture_in_picture'}</span>
+              </button>
+            </div>
+            {!pipCollapsed && (
+              <div style={{ padding: '10px', height: '200px' }}>
+                <LiveVideoRoom token={token} serverUrl={livekitUrl} onDisconnect={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

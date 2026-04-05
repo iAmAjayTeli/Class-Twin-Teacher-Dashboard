@@ -1,6 +1,6 @@
 // useLiveKit — hook to fetch a LiveKit token and manage connection metadata
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -12,6 +12,8 @@ export default function useLiveKit() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Guard to prevent double stopStream calls
+  const stoppingRef = useRef(false);
 
   const getAuthHeader = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -22,6 +24,7 @@ export default function useLiveKit() {
   const startStream = useCallback(async (sessionId) => {
     setLoading(true);
     setError(null);
+    stoppingRef.current = false;
     try {
       const headers = await getAuthHeader();
       const res = await fetch(`${API_URL}/api/sessions/${sessionId}/start-stream`, {
@@ -43,19 +46,65 @@ export default function useLiveKit() {
     }
   }, []);
 
-  /** Stop stream */
-  const stopStream = useCallback(async (sessionId) => {
+  /** Teacher: rejoin an already-live stream (page refresh / navigation back) */
+  const rejoinStream = useCallback(async (sessionId) => {
+    setLoading(true);
+    setError(null);
+    stoppingRef.current = false;
     try {
       const headers = await getAuthHeader();
-      await fetch(`${API_URL}/api/sessions/${sessionId}/stop-stream`, {
+      const res = await fetch(`${API_URL}/api/sessions/${sessionId}/rejoin-stream`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', ...headers },
       });
+      if (!res.ok) {
+        // Session may no longer be streaming — not a hard error
+        console.log('Rejoin stream: session not streaming or error');
+        return null;
+      }
+      const data = await res.json();
+      setToken(data.token);
+      setLivekitUrl(data.url);
+      setRoomName(data.roomName);
+      setIsStreaming(true);
+      return data;
+    } catch (err) {
+      console.error('Rejoin stream error:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /** Stop stream — guarded against double-calls */
+  const stopStream = useCallback(async (sessionId) => {
+    // Prevent duplicate calls (DisconnectButton click + onDisconnected event)
+    if (stoppingRef.current) {
+      console.log('⏩ stopStream already in progress, skipping duplicate call');
+      return;
+    }
+    stoppingRef.current = true;
+
+    try {
+      const headers = await getAuthHeader();
+      const res = await fetch(`${API_URL}/api/sessions/${sessionId}/stop-stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('stopStream API error:', errText);
+      } else {
+        console.log('✅ Stream stopped successfully');
+      }
+    } catch (err) {
+      console.error('stopStream network error:', err);
+    } finally {
+      // Always clean up local state regardless of API success
       setToken(null);
       setRoomName(null);
       setIsStreaming(false);
-    } catch (err) {
-      console.error('stopStream error:', err);
     }
   }, []);
 
@@ -88,6 +137,7 @@ export default function useLiveKit() {
     loading,
     error,
     startStream,
+    rejoinStream,
     stopStream,
     getViewerToken,
   };
