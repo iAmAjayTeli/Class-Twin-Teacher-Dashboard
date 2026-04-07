@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { supabase } from '../lib/supabase';
 
-const SOCKET_URL = 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function useSocket(sessionCode) {
   const socketRef = useRef(null);

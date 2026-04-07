@@ -227,7 +227,7 @@ export default function SessionLobby() {
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       if (!authSession?.access_token) return;
-      const res = await fetch(`http://localhost:3001/api/sessions/${resolvedSessionId}/teacher-message`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/sessions/${resolvedSessionId}/teacher-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
         body: JSON.stringify({ message: teacherReply.trim() }),
@@ -247,7 +247,7 @@ export default function SessionLobby() {
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       if (!authSession?.access_token) { setQuizError('Not authenticated'); return; }
-      const res = await fetch(`http://localhost:3001/api/sessions/${resolvedSessionId}/generate-quiz`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/sessions/${resolvedSessionId}/generate-quiz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
         body: JSON.stringify({ topic: quizTopic.trim() }),

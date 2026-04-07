@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 
-const API = 'http://localhost:3001';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const suggestedPrompts = [
   { icon: 'my_location', text: "What's the current confusion hotspot?", color: '#EF4444', bg: '#FEF2F2' },
