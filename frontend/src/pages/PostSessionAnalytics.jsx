@@ -224,8 +224,24 @@ export default function PostSessionAnalytics() {
                       Based on current engagement trends and homework submission rates, the AI predicts a <strong style={{ color: 'var(--secondary)' }}>4% drop in mid-term scores</strong> for the Physics cohort. Immediate intervention suggested for the bottom 15% of students.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <button style={{ padding: '12px 24px', backgroundColor: '#F9FAFB', border: '1px solid #EAECF0', borderRadius: '12px', color: '#1A5C3B', cursor: 'pointer', fontWeight: 600, fontFamily: 'Inter,sans-serif' }}>Review At-Risk Students</button>
-                      <button style={{ padding: '12px 24px', background: 'linear-gradient(135deg,#1A5C3B,#2D7A52)', border: 'none', borderRadius: '12px', color: '#fff', cursor: 'pointer', fontWeight: 600, fontFamily: 'Inter,sans-serif' }}>Generate Remedial Plan</button>
+                      <button
+                        onClick={() => navigate('/students')}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#E8F5EE'; e.currentTarget.style.borderColor = '#1A5C3B'; }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#F9FAFB'; e.currentTarget.style.borderColor = '#EAECF0'; }}
+                        style={{ padding: '12px 24px', backgroundColor: '#F9FAFB', border: '1px solid #EAECF0', borderRadius: '12px', color: '#1A5C3B', cursor: 'pointer', fontWeight: 600, fontFamily: 'Inter,sans-serif', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>group</span>
+                        Review At-Risk Students
+                      </button>
+                      <button
+                        onClick={() => navigate('/ai-tutor', { state: { autoPrompt: 'Generate a detailed remedial plan for the bottom 15% of students in the Physics cohort who are predicted to see a 4% drop in mid-term scores. Include specific intervention strategies, timeline, and personalized study recommendations.' } })}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(26,92,59,0.3)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        style={{ padding: '12px 24px', background: 'linear-gradient(135deg,#1A5C3B,#2D7A52)', border: 'none', borderRadius: '12px', color: '#fff', cursor: 'pointer', fontWeight: 600, fontFamily: 'Inter,sans-serif', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>auto_fix_high</span>
+                        Generate Remedial Plan
+                      </button>
                     </div>
                   </div>
                 </div>

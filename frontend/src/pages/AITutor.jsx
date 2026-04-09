@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -222,6 +223,7 @@ function NudgeCard({ nudgeAction }) {
 /* ═══════════════════════════════════════════════ */
 export default function AITutor() {
   const { session, user } = useAuth();
+  const location = useLocation();
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -256,6 +258,19 @@ export default function AITutor() {
     const interval = setInterval(fetchTwinState, 15000);
     return () => clearInterval(interval);
   }, [fetchTwinState]);
+
+  // Auto-send prompt from navigation state (e.g. from Analytics page "Generate Remedial Plan")
+  const autoPromptHandled = useRef(false);
+  useEffect(() => {
+    if (location.state?.autoPrompt && !autoPromptHandled.current) {
+      autoPromptHandled.current = true;
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        handleSend(location.state.autoPrompt);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
