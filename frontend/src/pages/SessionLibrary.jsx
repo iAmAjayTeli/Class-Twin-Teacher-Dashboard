@@ -408,11 +408,11 @@ export default function SessionLibrary() {
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button className="ct-btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '11px 16px', fontSize: '13px' }}>
+                <button className="ct-btn-primary" onClick={() => navigate('/analytics')} style={{ width: '100%', justifyContent: 'center', padding: '11px 16px', fontSize: '13px' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>monitoring</span>
                   View Full Report
                 </button>
-                <button className="ct-btn-outline" style={{ width: '100%', justifyContent: 'center', padding: '10px 16px', fontSize: '13px' }}>
+                <button className="ct-btn-outline" onClick={() => navigate('/ai-tutor')} style={{ width: '100%', justifyContent: 'center', padding: '10px 16px', fontSize: '13px' }}>
                   Optimize My Deck
                 </button>
               </div>
