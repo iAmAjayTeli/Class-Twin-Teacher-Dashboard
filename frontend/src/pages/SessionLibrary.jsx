@@ -12,6 +12,7 @@ export default function SessionLibrary() {
   const [pastSessions, setPastSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [showAllSessions, setShowAllSessions] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [oracle, setOracle] = useState({ loading: true, message: '', score: 0 });
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -51,6 +52,15 @@ export default function SessionLibrary() {
   const endedSessions = pastSessions.filter(s => s.status === 'archived' || s.status === 'ended').length;
   const runningSessions = pastSessions.filter(s => s.status === 'active').length;
 
+  // Filter sessions by search query
+  const filteredSessions = searchQuery.trim()
+    ? pastSessions.filter(s =>
+        (s.topic || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.join_code || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.subject || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : pastSessions;
+
   const statusColor = { active: '#1A5C3B', archived: '#6B7280', ended: '#6B7280' };
   const statusBg = { active: '#E8F5EE', archived: '#F3F4F6', ended: '#F3F4F6' };
   const statusLabel = { active: 'Active', archived: 'Archived', ended: 'Ended' };
@@ -77,15 +87,23 @@ export default function SessionLibrary() {
           {/* Search */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '10px',
-            background: '#F9FAFB', border: '1px solid #EAECF0',
+            background: '#F9FAFB', border: searchQuery ? '1px solid #1A5C3B' : '1px solid #EAECF0',
             borderRadius: '10px', padding: '8px 16px',
-            width: '320px',
+            width: '320px', transition: 'border-color 0.2s',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#9CA3AF' }}>search</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px', color: searchQuery ? '#1A5C3B' : '#9CA3AF', transition: 'color 0.2s' }}>search</span>
             <input type="text" placeholder="Search sessions..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
               style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', color: '#111827', width: '100%', fontFamily: 'Inter, sans-serif' }}
             />
-            <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 600, background: '#EAECF0', padding: '2px 6px', borderRadius: '5px' }}>⌘ F</span>
+            {searchQuery ? (
+              <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#9CA3AF' }}>close</span>
+              </button>
+            ) : (
+              <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 600, background: '#EAECF0', padding: '2px 6px', borderRadius: '5px', whiteSpace: 'nowrap' }}>⌘ F</span>
+            )}
           </div>
           {/* Right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -239,9 +257,17 @@ export default function SessionLibrary() {
                     Start New Session
                   </button>
                 </div>
+              ) : filteredSessions.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: '12px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '36px', color: '#D1D5DB' }}>search_off</span>
+                  <p style={{ color: '#6B7280', fontSize: '14px', fontWeight: 600 }}>No sessions match "{searchQuery}"</p>
+                  <button onClick={() => setSearchQuery('')} style={{ fontSize: '12px', color: '#1A5C3B', background: '#E8F5EE', border: 'none', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontWeight: 600 }}>
+                    Clear search
+                  </button>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: showAllSessions ? '600px' : 'none', overflowY: showAllSessions ? 'auto' : 'visible' }}>
-                  {pastSessions.slice(0, showAllSessions ? pastSessions.length : 6).map((card, i) => {
+                  {filteredSessions.slice(0, 6).map((card, i) => {
                     const topic = card.topic || 'General Session';
                     const cStatus = card.status || 'archived';
                     const studentCount = card.session_students?.length || 0;
