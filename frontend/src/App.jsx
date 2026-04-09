@@ -11,6 +11,8 @@ import PostSessionAnalytics from './pages/PostSessionAnalytics';
 import Materials from './pages/Materials';
 import AITutor from './pages/AITutor';
 import AllSessions from './pages/AllSessions';
+import Settings from './pages/Settings';
+import HelpCenter from './pages/HelpCenter';
 import TestStudentAssignment from './pages/TestStudentAssignment';
 
 function ProtectedRoute({ children }) {
@@ -44,6 +46,8 @@ export default function App() {
           <Route path="/analytics" element={<ProtectedRoute><PostSessionAnalytics /></ProtectedRoute>} />
           <Route path="/materials" element={<ProtectedRoute><Materials /></ProtectedRoute>} />
           <Route path="/ai-tutor" element={<ProtectedRoute><AITutor /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><HelpCenter /></ProtectedRoute>} />
           <Route path="/test-student-assignment/:id" element={<TestStudentAssignment />} />
         </Routes>
       </Router>

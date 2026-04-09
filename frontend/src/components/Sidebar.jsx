@@ -48,8 +48,8 @@ export default function Sidebar({ onStartSession }) {
   ];
 
   const generalItems = [
-    { icon: 'settings', label: 'Settings', path: '#' },
-    { icon: 'help', label: 'Help Center', path: '#' },
+    { icon: 'settings', label: 'Settings', path: '/settings' },
+    { icon: 'help', label: 'Help Center', path: '/help' },
   ];
 
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Teacher';
