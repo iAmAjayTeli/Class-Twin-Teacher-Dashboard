@@ -2,9 +2,9 @@
 
 const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
 
-const LIVEKIT_URL     = process.env.LIVEKIT_URL     || 'wss://class-twin-gpmml780.livekit.cloud';
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || '';
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '';
+const LIVEKIT_URL     = (process.env.LIVEKIT_URL     || 'wss://class-twin-gpmml780.livekit.cloud').trim();
+const LIVEKIT_API_KEY = (process.env.LIVEKIT_API_KEY || '').trim();
+const LIVEKIT_API_SECRET = (process.env.LIVEKIT_API_SECRET || '').trim();
 
 // HTTP URL for RoomServiceClient (convert wss → https)
 const httpUrl = LIVEKIT_URL.replace(/^wss?:\/\//, 'https://');
