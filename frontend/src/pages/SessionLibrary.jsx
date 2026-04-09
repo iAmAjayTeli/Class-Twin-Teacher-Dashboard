@@ -134,19 +134,32 @@ export default function SessionLibrary() {
 
           {/* Stats Row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-            {/* Highlight card */}
-            <div style={{
-              background: 'linear-gradient(135deg, #1A5C3B 0%, #0f3d26 100%)',
-              borderRadius: '16px',
-              padding: '24px',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 8px 24px rgba(26, 92, 59, 0.25)',
-            }}>
+            {/* Highlight card — Total Sessions */}
+            <div
+              onClick={() => setShowAllSessions(true)}
+              style={{
+                background: 'linear-gradient(135deg, #1A5C3B 0%, #0f3d26 100%)',
+                borderRadius: '16px',
+                padding: '24px',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(26, 92, 59, 0.25)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+              }}
+              onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(26, 92, 59, 0.35)'; }}
+              onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(26, 92, 59, 0.25)'; }}
+              title="View all sessions"
+            >
               <div style={{ position: 'absolute', top: '-16px', right: '-16px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>Total Sessions</p>
-                <button style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowAllSessions(true); }}
+                  style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}
+                  onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+                  onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                >
                   <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#fff', transform: 'rotate(-45deg)' }}>arrow_forward</span>
                 </button>
               </div>
@@ -158,15 +171,33 @@ export default function SessionLibrary() {
             </div>
 
             {[
-              { label: 'Ended Sessions', value: loadingSessions ? '--' : endedSessions, note: 'Archived sessions' },
-              { label: 'Running Sessions', value: loadingSessions ? '--' : runningSessions, note: 'Currently active' },
-              { label: 'Insights Ready', value: loadingSessions ? '--' : oracle.score + '%', note: 'Cognitive sync score' },
+              { label: 'Ended Sessions', value: loadingSessions ? '--' : endedSessions, note: 'Archived sessions', action: () => navigate('/analytics'), title: 'View analytics' },
+              { label: 'Running Sessions', value: loadingSessions ? '--' : runningSessions, note: 'Currently active', action: () => {
+                const activeSession = pastSessions.find(s => s.status === 'active');
+                if (activeSession && activeSession.join_code) {
+                  navigate(`/lobby/${activeSession.join_code}?sessionId=${activeSession.id}`);
+                } else {
+                  setShowModal(true);
+                }
+              }, title: runningSessions > 0 ? 'Go to active session' : 'Start a new session' },
+              { label: 'Insights Ready', value: loadingSessions ? '--' : oracle.score + '%', note: 'Cognitive sync score', action: () => navigate('/ai-tutor'), title: 'Open AI Tutor' },
             ].map((stat, i) => (
-              <div key={i} className="ct-card" style={{ padding: '24px' }}>
+              <div key={i} className="ct-card"
+                onClick={stat.action}
+                style={{ padding: '24px', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'; }}
+                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
+                title={stat.title}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                   <p style={{ fontSize: '13px', fontWeight: 600, color: '#6B7280' }}>{stat.label}</p>
-                  <button style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F9FAFB', border: '1px solid #EAECF0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#6B7280', transform: 'rotate(-45deg)' }}>arrow_forward</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); stat.action(); }}
+                    style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F9FAFB', border: '1px solid #EAECF0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseOver={e => { e.currentTarget.style.background = '#1A5C3B'; e.currentTarget.querySelector('span').style.color = '#fff'; }}
+                    onMouseOut={e => { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.querySelector('span').style.color = '#6B7280'; }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#6B7280', transform: 'rotate(-45deg)', transition: 'color 0.2s' }}>arrow_forward</span>
                   </button>
                 </div>
                 <p className="font-headline" style={{ fontSize: '40px', fontWeight: 800, color: '#111827', lineHeight: 1 }}>{stat.value}</p>
