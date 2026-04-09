@@ -136,7 +136,7 @@ export default function SessionLibrary() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
             {/* Highlight card — Total Sessions */}
             <div
-              onClick={() => setShowAllSessions(true)}
+              onClick={() => navigate('/all-sessions')}
               style={{
                 background: 'linear-gradient(135deg, #1A5C3B 0%, #0f3d26 100%)',
                 borderRadius: '16px',
@@ -155,7 +155,7 @@ export default function SessionLibrary() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>Total Sessions</p>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowAllSessions(true); }}
+                  onClick={(e) => { e.stopPropagation(); navigate('/all-sessions'); }}
                   style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}
                   onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
                   onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
@@ -217,12 +217,12 @@ export default function SessionLibrary() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>Recent Sessions</h2>
                 <button
-                  onClick={() => setShowAllSessions(prev => !prev)}
+                  onClick={() => navigate('/all-sessions')}
                   style={{ fontSize: '12px', fontWeight: 600, color: '#1A5C3B', background: '#E8F5EE', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', transition: 'all 0.2s' }}
                   onMouseOver={e => { e.currentTarget.style.background = '#1A5C3B'; e.currentTarget.style.color = '#fff'; }}
                   onMouseOut={e => { e.currentTarget.style.background = '#E8F5EE'; e.currentTarget.style.color = '#1A5C3B'; }}
                 >
-                  {showAllSessions ? 'Show less' : `View all (${pastSessions.length})`}
+                  View all →
                 </button>
               </div>
               {loadingSessions ? (

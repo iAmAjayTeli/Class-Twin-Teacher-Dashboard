@@ -10,6 +10,7 @@ import StudentDetailPage from './pages/StudentDetailPage';
 import PostSessionAnalytics from './pages/PostSessionAnalytics';
 import Materials from './pages/Materials';
 import AITutor from './pages/AITutor';
+import AllSessions from './pages/AllSessions';
 import TestStudentAssignment from './pages/TestStudentAssignment';
 
 function ProtectedRoute({ children }) {
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sessions" element={<ProtectedRoute><SessionLibrary /></ProtectedRoute>} />
+          <Route path="/all-sessions" element={<ProtectedRoute><AllSessions /></ProtectedRoute>} />
           <Route path="/lobby/:code" element={<ProtectedRoute><SessionLobby /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><LiveDashboard /></ProtectedRoute>} />
           <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
