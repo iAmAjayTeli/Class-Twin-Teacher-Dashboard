@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
+import { cacheClear, CACHE_KEYS } from '../lib/cache';
 
 const SUBJECTS = [
   { value: 'Mathematics',  icon: 'calculate',         color: '#3B82F6' },
@@ -52,7 +53,13 @@ export default function StartSessionModal({ onClose }) {
         subject,
         totalRounds: 8,
       });
-      if (result?.code) navigate(`/lobby/${result.code}?sessionId=${result.id}`);
+      if (result?.code) {
+        // Invalidate session caches so dashboard shows fresh data
+        cacheClear(CACHE_KEYS.DASHBOARD_STATS);
+        cacheClear(CACHE_KEYS.ALL_SESSIONS);
+        cacheClear(CACHE_KEYS.ANALYTICS_STATS);
+        navigate(`/lobby/${result.code}?sessionId=${result.id}`);
+      }
     } catch (err) {
       console.error(err);
     } finally {

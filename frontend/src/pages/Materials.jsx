@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, cacheClear, CACHE_KEYS, TTL } from '../lib/cache';
 
 const SUBJECTS = [
   { value: 'Mathematics',   icon: 'calculate',    color: '#8B5CF6' },
@@ -545,13 +546,25 @@ export default function Materials() {
 
   const fetchMaterials = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+
+    // ── Serve cached data instantly ──
+    const cached = cacheGet(CACHE_KEYS.MATERIALS);
+    if (cached) {
+      setMaterials(cached);
+      setLoading(false);
+    }
+
+    // ── Fetch fresh data ──
+    setLoading(prev => cached ? false : prev);
     const { data, error } = await supabase
       .from('materials')
       .select('*')
       .eq('teacher_id', user.id)
       .order('created_at', { ascending: false });
-    if (!error) setMaterials(data || []);
+    if (!error) {
+      setMaterials(data || []);
+      cacheSet(CACHE_KEYS.MATERIALS, data || [], TTL.LONG);
+    }
     setLoading(false);
   }, [user]);
 
@@ -559,11 +572,13 @@ export default function Materials() {
 
   const handleUploaded = (newMaterial) => {
     setMaterials(prev => [newMaterial, ...prev]);
+    cacheClear(CACHE_KEYS.MATERIALS);
     setShowUpload(false);
   };
 
   const handleDelete = (id) => {
     setMaterials(prev => prev.filter(m => m.id !== id));
+    cacheClear(CACHE_KEYS.MATERIALS);
   };
 
   const allSubjects = ['All', ...Array.from(new Set(materials.map(m => m.subject)))];

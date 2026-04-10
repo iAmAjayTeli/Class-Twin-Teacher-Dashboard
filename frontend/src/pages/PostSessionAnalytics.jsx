@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, CACHE_KEYS, TTL } from '../lib/cache';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
@@ -84,6 +85,14 @@ export default function PostSessionAnalytics() {
   }, []);
 
   async function fetchDashboardData() {
+    // ── Serve cached data instantly ──
+    const cached = cacheGet(CACHE_KEYS.ANALYTICS_STATS);
+    if (cached) {
+      setRealStats(cached);
+      setIsLoading(false);
+    }
+
+    // ── Fetch fresh data ──
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -93,7 +102,9 @@ export default function PostSessionAnalytics() {
 
       const res = await fetch(`${baseUrl}/api/dashboard/stats`, { headers });
       if (res.ok) {
-        setRealStats(await res.json());
+        const data = await res.json();
+        setRealStats(data);
+        cacheSet(CACHE_KEYS.ANALYTICS_STATS, data, TTL.MEDIUM);
       }
     } catch (err) {
       console.error('Error fetching real stats:', err);

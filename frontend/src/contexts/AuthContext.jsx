@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { cacheClearAll } from '../lib/cache';
 
 const AuthContext = createContext({});
 
@@ -64,6 +65,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    cacheClearAll();
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Sign out error:', error);

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, CACHE_KEYS, TTL } from '../lib/cache';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Animation Variants ────────────────────────────────────────
@@ -182,6 +183,61 @@ export default function StudentDetailPage() {
   const [sendingAssignment, setSendingAssignment] = useState(false);
   const [assignmentSent, setAssignmentSent] = useState(false);
 
+  // ── Time-range filter ──────────────────────────────────────────
+  const [filterRange, setFilterRange] = useState('all');
+  // 'all' | '7d' | '30d' | '3m'
+
+  const FILTER_OPTIONS = [
+    { value: 'all',  label: 'All Time',      icon: 'history' },
+    { value: '7d',   label: 'Last 7 Days',   icon: 'date_range' },
+    { value: '30d',  label: 'Last 30 Days',  icon: 'calendar_month' },
+    { value: '3m',   label: 'Last 3 Months', icon: 'calendar_today' },
+  ];
+
+  const getCutoffDate = (range) => {
+    const d = new Date();
+    if (range === '7d')  d.setDate(d.getDate() - 7);
+    if (range === '30d') d.setDate(d.getDate() - 30);
+    if (range === '3m')  d.setMonth(d.getMonth() - 3);
+    return d;
+  };
+
+  // Filtered session history
+  const filteredSessions = useMemo(() => {
+    if (!studentStats?.sessionHistory) return [];
+    if (filterRange === 'all') return studentStats.sessionHistory;
+    const cutoff = getCutoffDate(filterRange);
+    return studentStats.sessionHistory.filter(
+      sh => sh.joinedAt && new Date(sh.joinedAt) >= cutoff
+    );
+  }, [filterRange, studentStats]);
+
+  // Filtered confidence timeline
+  const filteredTimeline = useMemo(() => {
+    if (!studentStats?.confidenceOverTime) return [];
+    if (filterRange === 'all') return studentStats.confidenceOverTime;
+    const cutoff = getCutoffDate(filterRange);
+    return studentStats.confidenceOverTime.filter(
+      pt => pt.time && new Date(pt.time) >= cutoff
+    );
+  }, [filterRange, studentStats]);
+
+  // Derived stats from filtered sessions
+  const filteredStats = useMemo(() => {
+    const count = filteredSessions.length;
+    const answered = filteredSessions.reduce((s, sh) => s + (sh.totalAnswered || 0), 0);
+    const correct  = filteredSessions.reduce((s, sh) => s + (sh.totalCorrect  || 0), 0);
+    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : null;
+    const lastSeen = filteredSessions.reduce((latest, sh) => {
+      if (!sh.joinedAt) return latest;
+      return (!latest || new Date(sh.joinedAt) > new Date(latest)) ? sh.joinedAt : latest;
+    }, null);
+    return { count, accuracy, answered, correct, lastSeen };
+  }, [filteredSessions]);
+
+  const isFiltered = filterRange !== 'all';
+  const activeFilterLabel = FILTER_OPTIONS.find(o => o.value === filterRange)?.label || 'All Time';
+
   const donutColors = ['#8B5CF6', '#1A5C3B', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899'];
 
   // Colour palette for score
@@ -206,7 +262,7 @@ export default function StudentDetailPage() {
         .select('*')
         .eq('student_name', name)
         .eq('teacher_id', user.id)
-        .single();
+        .maybeSingle();
       if (data) {
         setPrediction({
           passScore: data.pass_score,
@@ -221,7 +277,15 @@ export default function StudentDetailPage() {
   }
 
   async function fetchStudentStats(name) {
-    setLoadingStats(true);
+    // ── Serve cached data instantly ──
+    const cacheKey = CACHE_KEYS.STUDENT_DETAIL(name);
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      setStudentStats(cached);
+      setLoadingStats(false);
+    }
+
+    // ── Fetch fresh data ──
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -229,7 +293,11 @@ export default function StudentDetailPage() {
         `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/students/${encodeURIComponent(name)}/stats`,
         { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
-      if (res.ok) setStudentStats(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setStudentStats(data);
+        cacheSet(cacheKey, data, TTL.MEDIUM);
+      }
     } catch (err) {
       console.error('Error fetching student stats:', err);
     } finally {
@@ -246,23 +314,49 @@ export default function StudentDetailPage() {
       const edgeFnUrl = `${import.meta.env.VITE_SUPABASE_URL || 'https://woulwfbaejlwlgfbpnqu.supabase.co'}/functions/v1/predict-student`;
       const { data: { session } } = await supabase.auth.getSession();
 
+      // ── Compute aggregated quiz accuracy across all sessions ──
+      const totalCorrect = studentStats.sessionHistory?.reduce((sum, sh) => sum + (sh.totalCorrect || 0), 0) ?? 0;
+      const totalAnswered = studentStats.sessionHistory?.reduce((sum, sh) => sum + (sh.totalAnswered || 0), 0) ?? 0;
+      const avgAccuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : null;
+
+      // ── Compute avg comprehension across sessions ──
+      const compSessions = studentStats.sessionHistory?.filter(sh => sh.comprehension != null) ?? [];
+      const avgComprehension = compSessions.length > 0
+        ? Math.round(compSessions.reduce((sum, sh) => sum + sh.comprehension, 0) / compSessions.length)
+        : null;
+
       const payload = {
         studentName: s.name,
         totalSessions: s.totalSessions,
         totalEngagementLogs: s.totalEngagementLogs,
+        // Core engagement metrics
         avgConfidence: s.avgConfidence,
         avgGazeOnScreen: s.avgGazeOnScreen,
         presenceRate: s.presenceRate,
         tabActiveRate: s.tabActiveRate,
+        avgComprehension,
+        // Quiz performance — strongest signal for pass/fail
+        avgAccuracy,
+        totalCorrect,
+        totalAnswered,
+        // Behavioural patterns
         dominantEmotion: s.dominantEmotion,
         dominantEngagementState: s.dominantEngagementState,
         emotionDistribution: s.emotionDistribution,
         headPoseDistribution: s.headPoseDistribution,
         networkQualityDistribution: s.networkQualityDistribution,
+        // Per-session detail with computed accuracy per session
         sessionHistory: studentStats.sessionHistory?.map(sh => ({
-          topic: sh.topic, status: sh.status, mode: sh.mode,
-          totalCorrect: sh.totalCorrect, totalAnswered: sh.totalAnswered,
+          topic: sh.topic,
+          status: sh.status,
+          mode: sh.mode,
           risk: sh.risk,
+          comprehension: sh.comprehension,
+          totalCorrect: sh.totalCorrect,
+          totalAnswered: sh.totalAnswered,
+          accuracy: sh.totalAnswered > 0
+            ? Math.round((sh.totalCorrect / sh.totalAnswered) * 100)
+            : null,
         })),
       };
 
@@ -276,7 +370,17 @@ export default function StudentDetailPage() {
       const data = await res.json();
 
       const now = new Date().toISOString();
-      const result = { ...data, predictedAt: now };
+
+      // ── Build visible signal chips ──
+      const dataSignals = [
+        avgAccuracy !== null && `Quiz accuracy: ${avgAccuracy}%`,
+        payload.avgConfidence != null && `Confidence: ${payload.avgConfidence}%`,
+        payload.avgGazeOnScreen != null && `Gaze: ${payload.avgGazeOnScreen}%`,
+        payload.presenceRate != null && `Presence: ${payload.presenceRate}%`,
+        `${payload.totalSessions} sessions`,
+      ].filter(Boolean);
+
+      const result = { ...data, predictedAt: now, dataSignals };
       setPrediction(result);
 
       // ── Persist to Supabase ──
@@ -572,6 +676,17 @@ export default function StudentDetailPage() {
                           <p style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.7, margin: 0 }}>
                             {prediction.summary}
                           </p>
+                          {/* ── Data signals used by Gemini ── */}
+                          {prediction.dataSignals && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+                              {prediction.dataSignals.map((sig, i) => (
+                                <span key={i} style={{
+                                  padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 600,
+                                  background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB',
+                                }}>{sig}</span>
+                              ))}
+                            </div>
+                          )}
                           {prediction.predictedAt && (
                             <p style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>schedule</span>
@@ -679,7 +794,18 @@ export default function StudentDetailPage() {
 
               {/* ── Engagement Metrics ── */}
               <SectionCard accentColor="#1A5C3B">
-                <SectionLabel icon="monitoring" label="Engagement Metrics" color="#1A5C3B" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#1A5C3B18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="material-symbols-outlined filled" style={{ fontSize: '16px', color: '#1A5C3B' }}>monitoring</span>
+                  </div>
+                  <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6B7280', fontWeight: 700, margin: 0 }}>Engagement Metrics</h4>
+                  {isFiltered && (
+                    <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: '50px', background: '#F3F4F6', color: '#6B7280', fontSize: '10px', fontWeight: 600, border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>info</span>
+                      All-time averages
+                    </span>
+                  )}
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '16px' }}>
                   <StatRing value={studentStats.summary.avgConfidence} label="Confidence" color="#8B5CF6" size={100} />
                   <StatRing value={studentStats.summary.avgGazeOnScreen} label="Gaze Focus" color="#1A5C3B" size={100} />
@@ -770,9 +896,19 @@ export default function StudentDetailPage() {
               </div>
 
               {/* ── Confidence Timeline ── */}
-              {studentStats.confidenceOverTime.length > 0 && (
+              {filteredTimeline.length > 0 && (
                 <SectionCard accentColor="#8B5CF6">
-                  <SectionLabel icon="timeline" label="Confidence Timeline" color="#8B5CF6" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#8B5CF618', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span className="material-symbols-outlined filled" style={{ fontSize: '16px', color: '#8B5CF6' }}>timeline</span>
+                    </div>
+                    <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6B7280', fontWeight: 700, margin: 0 }}>Confidence Timeline</h4>
+                    {isFiltered && (
+                      <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: '50px', background: '#EDE9FE', color: '#7C3AED', fontSize: '10px', fontWeight: 700, border: '1px solid #DDD6FE' }}>
+                        {filteredTimeline.length} logs · {activeFilterLabel}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ position: 'relative' }}>
                     {/* Y-axis labels */}
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 20, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '10px', color: '#9CA3AF', fontWeight: 600 }}>
@@ -782,7 +918,7 @@ export default function StudentDetailPage() {
                       <span>25%</span>
                     </div>
                     <div style={{ marginLeft: '32px' }}>
-                      <svg width="100%" height="160" viewBox={`0 0 ${Math.max(studentStats.confidenceOverTime.length * 50, 300)} 160`} preserveAspectRatio="none" style={{ display: 'block' }}>
+                      <svg width="100%" height="160" viewBox={`0 0 ${Math.max(filteredTimeline.length * 50, 300)} 160`} preserveAspectRatio="none" style={{ display: 'block' }}>
                         <defs>
                           <linearGradient id="confGradNew" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.25" />
@@ -794,7 +930,7 @@ export default function StudentDetailPage() {
                             stroke="#F3F4F6" strokeWidth="1" strokeDasharray="4 4" />
                         ))}
                         {(() => {
-                          const pts = studentStats.confidenceOverTime;
+                          const pts = filteredTimeline;
                           const w = Math.max(pts.length * 50, 300);
                           const path = pts.map((p, i) => {
                             const x = (i / Math.max(pts.length - 1, 1)) * (w - 30) + 15;
@@ -807,14 +943,15 @@ export default function StudentDetailPage() {
                             <>
                               <motion.path initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 1 }} d={areaPath} fill="url(#confGradNew)" />
                               <motion.path
+                                key={`line-${filterRange}`}
                                 initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                                transition={{ duration: 1.5, ease: 'easeInOut' }}
+                                transition={{ duration: 1.2, ease: 'easeInOut' }}
                                 d={path} fill="none" stroke="#8B5CF6" strokeWidth="2.5" strokeLinecap="round"
                               />
                               {pts.map((p, i) => {
                                 const x = (i / Math.max(pts.length - 1, 1)) * (w - 30) + 15;
                                 const y = 145 - (p.confidence || 0) * 125;
-                                return <motion.circle initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1 + i * 0.1, type: 'spring' }} key={i} cx={x} cy={y} r="5" fill="#8B5CF6" stroke="#FFFFFF" strokeWidth="2" />;
+                                return <motion.circle initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.8 + i * 0.05, type: 'spring' }} key={`${filterRange}-${i}`} cx={x} cy={y} r="5" fill="#8B5CF6" stroke="#FFFFFF" strokeWidth="2" />;
                               })}
                             </>
                           );
@@ -827,14 +964,59 @@ export default function StudentDetailPage() {
 
               {/* ── Session History Table ── */}
               <SectionCard accentColor="#F59E0B" padding="0">
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#FEF9C3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#F59E0B' }}>history_edu</span>
                   </div>
                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6B7280', fontWeight: 700, margin: 0 }}>Session History</h4>
-                  <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: '50px', background: '#FEF9C3', color: '#92400E', fontSize: '11px', fontWeight: 700 }}>
-                    {studentStats.sessionHistory.length} sessions
-                  </span>
+
+                  {/* ── Filter Dropdown ── */}
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Accuracy badge updates with filter */}
+                    {filteredStats.accuracy !== null && (
+                      <span style={{
+                        padding: '3px 10px', borderRadius: '50px', fontSize: '11px', fontWeight: 700,
+                        background: filteredStats.accuracy >= 70 ? '#E8F5EE' : filteredStats.accuracy >= 40 ? '#FEF9C3' : '#FEE2E2',
+                        color: filteredStats.accuracy >= 70 ? '#1A5C3B' : filteredStats.accuracy >= 40 ? '#92400E' : '#991B1B',
+                      }}>
+                        {filteredStats.accuracy}% accuracy
+                      </span>
+                    )}
+                    <span style={{ padding: '3px 10px', borderRadius: '50px', background: '#FEF9C3', color: '#92400E', fontSize: '11px', fontWeight: 700 }}>
+                      {filteredStats.count} sessions
+                    </span>
+
+                    {/* Filter select pill */}
+                    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                      <span className="material-symbols-outlined" style={{
+                        position: 'absolute', left: '10px', fontSize: '14px', pointerEvents: 'none',
+                        color: isFiltered ? '#1A5C3B' : '#9CA3AF',
+                      }}>calendar_month</span>
+                      <select
+                        value={filterRange}
+                        onChange={e => setFilterRange(e.target.value)}
+                        style={{
+                          paddingLeft: '28px', paddingRight: '28px', paddingTop: '5px', paddingBottom: '5px',
+                          borderRadius: '50px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                          border: isFiltered ? '1.5px solid #1A5C3B' : '1.5px solid #E5E7EB',
+                          background: isFiltered ? '#E8F5EE' : '#FFFFFF',
+                          color: isFiltered ? '#1A5C3B' : '#374151',
+                          outline: 'none',
+                          appearance: 'none', WebkitAppearance: 'none',
+                          fontFamily: 'Inter, sans-serif',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {FILTER_OPTIONS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined" style={{
+                        position: 'absolute', right: '8px', fontSize: '14px', pointerEvents: 'none',
+                        color: isFiltered ? '#1A5C3B' : '#9CA3AF',
+                      }}>expand_more</span>
+                    </div>
+                  </div>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -850,13 +1032,20 @@ export default function StudentDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {studentStats.sessionHistory.map((sh, i) => {
+                      {filteredSessions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#9CA3AF', fontSize: '13px' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '32px', display: 'block', marginBottom: '8px', opacity: 0.4 }}>event_busy</span>
+                            No sessions found for {activeFilterLabel.toLowerCase()}
+                          </td>
+                        </tr>
+                      ) : filteredSessions.map((sh, i) => {
                         const pct = sh.totalAnswered > 0 ? Math.round((sh.totalCorrect / sh.totalAnswered) * 100) : null;
                         return (
                           <motion.tr
                             key={sh.sessionStudentId}
                             initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 + i * 0.06 }}
+                            transition={{ delay: 0.05 + i * 0.04 }}
                             style={{ borderBottom: '1px solid #F9FAFB', background: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}
                             onMouseOver={e => e.currentTarget.style.background = '#F0FDF4'}
                             onMouseOut={e => e.currentTarget.style.background = i % 2 === 0 ? '#FFFFFF' : '#FAFAFA'}
