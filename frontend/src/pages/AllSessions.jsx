@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import StartSessionModal from '../components/StartSessionModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, CACHE_KEYS, TTL } from '../lib/cache';
 
 const statusColor = { active: '#1A5C3B', archived: '#6B7280', ended: '#6B7280' };
 const statusBg = { active: '#E8F5EE', archived: '#F3F4F6', ended: '#F3F4F6' };
@@ -40,6 +41,14 @@ export default function AllSessions() {
   }, []);
 
   async function fetchSessions() {
+    // ── Serve cached data instantly ──
+    const cached = cacheGet(CACHE_KEYS.ALL_SESSIONS);
+    if (cached) {
+      setSessions(cached);
+      setLoading(false);
+    }
+
+    // ── Fetch fresh data ──
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -47,7 +56,11 @@ export default function AllSessions() {
       const res = await fetch(`${baseUrl}/api/dashboard/stats`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (res.ok) setSessions(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(data);
+        cacheSet(CACHE_KEYS.ALL_SESSIONS, data, TTL.MEDIUM);
+      }
     } catch (err) {
       console.error('Failed to fetch sessions:', err);
     } finally {

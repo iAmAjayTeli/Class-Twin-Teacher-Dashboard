@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, CACHE_KEYS, TTL } from '../lib/cache';
 
 const avatarColors = [
   { bg: '#E8F5EE', text: '#1A5C3B' },
@@ -23,13 +24,25 @@ export default function StudentsPage() {
   useEffect(() => { fetchStudents(); }, []);
 
   async function fetchStudents() {
+    // ── Serve cached data instantly ──
+    const cached = cacheGet(CACHE_KEYS.STUDENTS);
+    if (cached) {
+      setStudents(cached);
+      setLoading(false);
+    }
+
+    // ── Fetch fresh data ──
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/students`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (res.ok) setStudents(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setStudents(data);
+        cacheSet(CACHE_KEYS.STUDENTS, data, TTL.MEDIUM);
+      }
     } catch (err) {
       console.error('Error fetching students:', err);
     } finally {

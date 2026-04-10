@@ -5,6 +5,7 @@ import StartSessionModal from '../components/StartSessionModal';
 import ImportDataModal from '../components/ImportDataModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { cacheGet, cacheSet, CACHE_KEYS, TTL } from '../lib/cache';
 
 export default function SessionLibrary() {
   const [showModal, setShowModal] = useState(false);
@@ -22,6 +23,18 @@ export default function SessionLibrary() {
   useEffect(() => { fetchDashboardData(); }, []);
 
   async function fetchDashboardData() {
+    // ── Serve cached data instantly ──
+    const cachedStats = cacheGet(CACHE_KEYS.DASHBOARD_STATS);
+    const cachedOracle = cacheGet(CACHE_KEYS.DASHBOARD_ORACLE);
+    if (cachedStats) {
+      setPastSessions(cachedStats);
+      setLoadingSessions(false);
+    }
+    if (cachedOracle) {
+      setOracle({ loading: false, ...cachedOracle });
+    }
+
+    // ── Fetch fresh data in background ──
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -33,16 +46,24 @@ export default function SessionLibrary() {
         fetch(`${baseUrl}/api/dashboard/oracle`, { headers })
       ]);
 
-      if (statsRes.ok) setPastSessions(await statsRes.json());
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        setPastSessions(stats);
+        cacheSet(CACHE_KEYS.DASHBOARD_STATS, stats, TTL.MEDIUM);
+      }
       if (oracleRes.ok) {
         const d = await oracleRes.json();
-        setOracle({ loading: false, message: d.message, score: d.score });
+        const oracleData = { message: d.message, score: d.score };
+        setOracle({ loading: false, ...oracleData });
+        cacheSet(CACHE_KEYS.DASHBOARD_ORACLE, oracleData, TTL.LONG);
       } else {
         setOracle({ loading: false, message: 'Oracle is currently unavailable.', score: 0 });
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setOracle({ loading: false, message: 'Oracle analysis failed.', score: 0 });
+      if (!cachedOracle) {
+        setOracle({ loading: false, message: 'Oracle analysis failed.', score: 0 });
+      }
     } finally {
       setLoadingSessions(false);
     }

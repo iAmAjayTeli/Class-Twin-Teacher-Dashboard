@@ -25,7 +25,7 @@ export default function Sidebar({ onStartSession }) {
         .eq('created_by', user.id)
         .eq('is_streaming', true)
         .limit(1)
-        .single();
+        .maybeSingle();
       setLiveSession(data || null);
     };
     checkLiveSession();
