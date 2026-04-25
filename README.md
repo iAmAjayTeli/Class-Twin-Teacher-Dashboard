@@ -21,7 +21,7 @@ An AI-powered, real-time teacher dashboard application that serves as the comman
 - **AI Integration:** Google Gemini API (`gemini-3-flash-preview`)
 - **Real-Time:** WebSockets, LiveKit (WebRTC)
 
-## 📁 Project Structure
+## 📁 Project Structure 
 
 ```text
 Class-Twin-Teacher-Dashboard/
