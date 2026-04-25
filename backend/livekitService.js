@@ -1,4 +1,10 @@
-// ClassTwin LiveKit Service — Token Generation & Room Management
+﻿/**
+ * @module livekitService
+ * @description Manages LiveKit WebRTC infrastructure â€” generates access tokens,
+ *              creates/deletes rooms, and monitors teacher presence for the
+ *              live video streaming subsystem.
+ */
+// ClassTwin LiveKit Service â€” Token Generation & Room Management
 
 const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
 
@@ -6,7 +12,7 @@ const LIVEKIT_URL     = (process.env.LIVEKIT_URL     || 'wss://class-twin-gpmml7
 const LIVEKIT_API_KEY = (process.env.LIVEKIT_API_KEY || '').trim();
 const LIVEKIT_API_SECRET = (process.env.LIVEKIT_API_SECRET || '').trim();
 
-// HTTP URL for RoomServiceClient (convert wss → https)
+// HTTP URL for RoomServiceClient (convert wss â†’ https)
 const httpUrl = LIVEKIT_URL.replace(/^wss?:\/\//, 'https://');
 const roomService = new RoomServiceClient(httpUrl, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
 
@@ -72,7 +78,7 @@ async function listParticipants(roomName) {
     const participants = await roomService.listParticipants(roomName);
     return participants || [];
   } catch (err) {
-    // Room doesn't exist or API error — treat as empty
+    // Room doesn't exist or API error â€” treat as empty
     return [];
   }
 }
