@@ -1,4 +1,4 @@
-# ClassTwin Teacher Dashboard
+# ClassTwin Teacher Dashboard 
 
 ![ClassTwin Cover](https://via.placeholder.com/1200x400/111827/FFFFFF?text=ClassTwin+Teacher+Dashboard)
 
