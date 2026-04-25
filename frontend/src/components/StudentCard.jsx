@@ -1,8 +1,15 @@
+﻿/**
+ * StudentCard â€” Displays a single student's status in the live dashboard.
+ * Shows name, risk level (On Track / At Risk / High Risk), comprehension
+ * percentage, and answer accuracy in a color-coded card.
+ *
+ * @param {{ student: { name: string, risk: string, comprehension: number, totalCorrect: number, totalAnswered: number } }} props
+ */
 export default function StudentCard({ student }) {
   const riskColors = {
-    ON_TRACK: { bg: 'rgba(74, 225, 118, 0.08)', border: 'rgba(74, 225, 118, 0.2)', color: '#4ae176', label: '🟢 On Track' },
-    AT_RISK: { bg: 'rgba(255, 185, 95, 0.08)', border: 'rgba(255, 185, 95, 0.2)', color: '#ffb95f', label: '🟡 At Risk' },
-    HIGH_RISK: { bg: 'rgba(255, 107, 107, 0.08)', border: 'rgba(255, 107, 107, 0.2)', color: '#ffb4ab', label: '🔴 High Risk' },
+    ON_TRACK: { bg: 'rgba(74, 225, 118, 0.08)', border: 'rgba(74, 225, 118, 0.2)', color: '#4ae176', label: 'ðŸŸ¢ On Track' },
+    AT_RISK: { bg: 'rgba(255, 185, 95, 0.08)', border: 'rgba(255, 185, 95, 0.2)', color: '#ffb95f', label: 'ðŸŸ¡ At Risk' },
+    HIGH_RISK: { bg: 'rgba(255, 107, 107, 0.08)', border: 'rgba(255, 107, 107, 0.2)', color: '#ffb4ab', label: 'ðŸ”´ High Risk' },
   };
 
   const risk = riskColors[student.risk] || riskColors.ON_TRACK;
