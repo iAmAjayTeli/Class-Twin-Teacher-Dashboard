@@ -13,7 +13,7 @@ An AI-powered, real-time teacher dashboard application that serves as the comman
 - **🤖 Live AI Co-pilot (Twin Chat):** Allows the teacher to dialogue with a context-aware AI assistant during the session. The co-pilot acts as a second set of eyes, analyzing student telemetry, recommending immediate interventions, and alerting the teacher to drop-offs in engagement.
 - **🎨 Modern "Warm Minimalism" UI:** A beautifully crafted, premium interface built with React. Features include fluid micro-animations, glassmorphism overlays, rich data visualization, and an elegant dark/light theme scheme.
 
-## 🛠 Tech Stack
+## 🛠 Tech Stack 
 
 - **Frontend:** React, Vite, Socket.io-client, LiveKit React Components
 - **Backend:** Node.js, Express, Socket.io
