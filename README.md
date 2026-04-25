@@ -31,7 +31,7 @@ Class-Twin-Teacher-Dashboard/
     └── functions/    # Deno-based Edge Functions (twin-chat, generate-quiz)
 ```
 
-## 🚀 Getting Started
+## 🚀 Getting Started 
 
 ### Prerequisites
 - Node.js (v16+)
