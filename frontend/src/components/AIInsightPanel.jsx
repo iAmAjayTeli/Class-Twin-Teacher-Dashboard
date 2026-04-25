@@ -1,10 +1,18 @@
+﻿/**
+ * AIInsightPanel â€” Renders real-time AI-generated teaching recommendations.
+ * Displays the recommended action, concept to revisit, and an animated
+ * class health score bar. Shows a placeholder state until round 2 data
+ * becomes available from the twin engine.
+ *
+ * @param {{ insight: { action: string, revisit: string, healthScore: number } | null }} props
+ */
 export default function AIInsightPanel({ insight }) {
   if (!insight) {
     return (
       <div className="ai-panel">
-        <div className="ai-badge">🤖 AI Twin Engine</div>
+        <div className="ai-badge">ðŸ¤– AI Twin Engine</div>
         <p className="body-md text-muted" style={{ marginTop: 8 }}>
-          AI insights will appear after round 2…
+          AI insights will appear after round 2â€¦
         </p>
       </div>
     );
@@ -13,7 +21,7 @@ export default function AIInsightPanel({ insight }) {
 
   return (
     <div className="ai-panel">
-      <div className="ai-badge">🤖 AI Twin Engine — Live</div>
+      <div className="ai-badge">ðŸ¤– AI Twin Engine â€” Live</div>
 
       <div style={{ marginTop: 16 }}>
         <div className="label-md" style={{ color: 'var(--on-surface-variant)', marginBottom: 8 }}>
@@ -29,7 +37,7 @@ export default function AIInsightPanel({ insight }) {
           Concept to Revisit
         </div>
         <div className="badge badge-warning" style={{ fontSize: '0.875rem', padding: '6px 14px' }}>
-          📖 {insight.revisit}
+          ðŸ“– {insight.revisit}
         </div>
       </div>
 
