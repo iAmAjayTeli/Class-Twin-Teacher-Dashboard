@@ -4,7 +4,7 @@
 
 An AI-powered, real-time teacher dashboard application that serves as the command center for modern live classrooms. The platform seamlessly integrates live video streaming, AI-generated quizzes, real-time engagement telemetry, and an intelligent AI co-pilot—empowering educators with deep, actionable insights.
 
-## ✨ Features
+## ✨ Features 
 
 - **🔴 Live Video Streaming & WebRTC:** Built on top of **LiveKit**, enabling educators to broadcast crystal-clear video to their students with robust auto-rejoin capabilities and live synchronization.
 - **🧠 AI-Powered Comprehension Tracking:** Leverages twin-engine AI edge functions to compute real-time classroom telemetry, seamlessly tracking risk profiles, engagement rates, and class health on a dynamic dashboard.
