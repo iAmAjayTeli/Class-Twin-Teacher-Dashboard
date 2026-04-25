@@ -1,4 +1,10 @@
-// ClassTwin AI Service — Claude API Integration for AI Insights
+﻿/**
+ * @module aiService
+ * @description Generates real-time AI teaching insights using the Claude API.
+ *              Falls back to heuristic-based simulated insights when the API
+ *              key is unavailable or the request fails.
+ */
+// ClassTwin AI Service â€” Claude API Integration for AI Insights
 
 async function getAIInsight(sessionData) {
   const { topic, round, totalRounds, classAvg, onTrack, atRisk, highRisk, missedConcept, trend } = sessionData;
@@ -65,7 +71,7 @@ Respond ONLY in JSON. No extra text, no markdown:
 
 function generateSimulatedInsight({ classAvg, highRisk, missedConcept, trend }) {
   const actions = [
-    `Slow down — ${highRisk} students lost on ${missedConcept}`,
+    `Slow down â€” ${highRisk} students lost on ${missedConcept}`,
     `Re-explain ${missedConcept} with a visual example now`,
     `Pause and ask students to discuss ${missedConcept} in pairs`,
     `Give a 30-second recap on ${missedConcept} before continuing`,
