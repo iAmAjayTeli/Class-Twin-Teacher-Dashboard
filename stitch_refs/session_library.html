@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ClassTwin | Library Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-primary-fixed": "#07006c",
+                "on-error-container": "#ffdad6",
+                "inverse-primary": "#494bd6",
+                "tertiary-container": "#ca8100",
+                "inverse-on-surface": "#2d3136",
+                "error": "#ffb4ab",
+                "surface-container-lowest": "#0a0e13",
+                "background": "#101419",
+                "on-surface": "#e0e2ea",
+                "surface-bright": "#36393f",
+                "on-background": "#e0e2ea",
+                "surface-variant": "#31353b",
+                "secondary-fixed-dim": "#4ae176",
+                "error-container": "#93000a",
+                "on-tertiary-fixed": "#2a1700",
+                "surface-container-highest": "#31353b",
+                "on-tertiary": "#472a00",
+                "on-primary": "#1000a9",
+                "on-error": "#690005",
+                "inverse-surface": "#e0e2ea",
+                "surface-container-low": "#181c21",
+                "outline-variant": "#464554",
+                "primary-fixed-dim": "#c0c1ff",
+                "on-primary-fixed-variant": "#2f2ebe",
+                "surface-tint": "#c0c1ff",
+                "on-secondary-fixed-variant": "#005321",
+                "secondary-container": "#00b954",
+                "outline": "#908fa0",
+                "on-secondary-container": "#004119",
+                "surface-container-high": "#262a30",
+                "secondary": "#4ae176",
+                "on-secondary": "#003915",
+                "tertiary-fixed": "#ffddb8",
+                "surface-container": "#1c2025",
+                "secondary-fixed": "#6bff8f",
+                "primary-fixed": "#e1e0ff",
+                "tertiary-fixed-dim": "#ffb95f",
+                "on-primary-container": "#0d0096",
+                "primary-container": "#8083ff",
+                "primary": "#c0c1ff",
+                "tertiary": "#ffb95f",
+                "surface-dim": "#101419",
+                "surface": "#101419",
+                "on-tertiary-container": "#3e2400",
+                "on-secondary-fixed": "#002109",
+                "on-tertiary-fixed-variant": "#653e00",
+                "on-surface-variant": "#c7c4d7"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "fontFamily": {
+                "headline": ["Plus Jakarta Sans"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .liquid-prism-glow {
+            background: radial-gradient(circle at center, rgba(128, 131, 255, 0.15) 0%, transparent 70%);
+        }
+        .glass-highlight {
+            box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+        }
+        .noise-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 min-h-screen flex overflow-hidden">
+<!-- SideNavBar Component (From JSON) -->
+<aside class="hidden md:flex flex-col h-screen w-72 border-r border-[#e0e2ea]/10 bg-[#101419] p-6 space-y-8 relative z-20">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-inverse-primary flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-on-primary-fixed" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<h1 class="text-xl font-black text-[#e0e2ea] font-headline tracking-tight">ClassTwin AI</h1>
+<p class="text-[10px] uppercase tracking-widest text-secondary font-bold">The Refractive Oracle</p>
+</div>
+</div>
+<button class="w-full py-3 bg-gradient-to-r from-primary to-inverse-primary text-on-primary-fixed font-bold rounded-xl shadow-xl shadow-primary/10 hover:scale-[1.02] active:scale-95 transition-all duration-200">
+            Start Session
+        </button>
+<nav class="flex-1 space-y-2">
+<!-- Dashboard (Inactive) -->
+<a class="flex items-center space-x-3 px-4 py-3 text-[#e0e2ea]/50 hover:bg-[#262a30] hover:text-[#e0e2ea] rounded-lg transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+<!-- Active Class (Inactive) -->
+<a class="flex items-center space-x-3 px-4 py-3 text-[#e0e2ea]/50 hover:bg-[#262a30] hover:text-[#e0e2ea] rounded-lg transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">school</span>
+<span class="font-medium">Active Class</span>
+</a>
+<!-- Materials (Active Mapping) -->
+<a class="flex items-center space-x-3 px-4 py-3 bg-[#1c2025] text-[#c0c1ff] rounded-lg border-l-4 border-[#4ae176] transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">book_5</span>
+<span class="font-medium">Materials</span>
+</a>
+<!-- Insights (Inactive) -->
+<a class="flex items-center space-x-3 px-4 py-3 text-[#e0e2ea]/50 hover:bg-[#262a30] hover:text-[#e0e2ea] rounded-lg transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">analytics</span>
+<span class="font-medium">Insights</span>
+</a>
+<!-- Support (Inactive) -->
+<a class="flex items-center space-x-3 px-4 py-3 text-[#e0e2ea]/50 hover:bg-[#262a30] hover:text-[#e0e2ea] rounded-lg transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">support_agent</span>
+<span class="font-medium">Support</span>
+</a>
+</nav>
+<div class="pt-6 border-t border-outline-variant/10">
+<div class="flex items-center space-x-3 px-4 py-3 text-[#e0e2ea]/50 hover:text-error transition-colors cursor-pointer">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-medium">Log Out</span>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-1 h-screen overflow-y-auto relative bg-background flex flex-col">
+<!-- Floating Ambient Glows -->
+<div class="fixed top-[-10%] right-[-10%] w-[600px] h-[600px] liquid-prism-glow pointer-events-none opacity-50"></div>
+<div class="fixed bottom-[-5%] left-[5%] w-[400px] h-[400px] liquid-prism-glow pointer-events-none opacity-30"></div>
+<!-- Top Header Section -->
+<header class="px-10 pt-12 pb-8 relative z-10">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h2 class="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface mb-2">
+                        Welcome back, <span class="text-primary-fixed-dim">Professor Smith</span>
+</h2>
+<p class="text-on-surface-variant font-medium tracking-wide">Ready to orchestrate today's cognitive experience?</p>
+</div>
+<button class="group relative px-8 py-4 bg-[#6366F1] hover:bg-[#5558e3] text-white font-bold rounded-2xl shadow-[0_20px_50px_rgba(99,102,241,0.3)] transition-all duration-300 active:scale-95 flex items-center gap-3">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+<span>Start New Session</span>
+<div class="absolute inset-0 rounded-2xl ring-2 ring-[#6366F1] ring-offset-4 ring-offset-background opacity-0 group-hover:opacity-30 transition-opacity"></div>
+</button>
+</div>
+</header>
+<!-- Search & Filter Bar (The Thin Glass Strip) -->
+<section class="px-10 mb-12 sticky top-0 z-30 pt-4">
+<div class="bg-surface-container-low/60 backdrop-blur-[30px] rounded-2xl p-2 border border-white/5 glass-highlight flex items-center shadow-2xl">
+<div class="flex-1 flex items-center px-4 gap-3">
+<span class="material-symbols-outlined text-outline">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-outline/60 text-sm py-3 font-medium" placeholder="Search lesson plans, archives, or AI prompts..." type="text"/>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20 mx-2"></div>
+<div class="flex gap-1 px-2">
+<button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-fixed-dim hover:bg-white/5 rounded-xl transition-colors">Sort: Recent</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Lesson Grid -->
+<section class="px-10 pb-24 relative z-10">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card 1: Intro to JS -->
+<div class="group relative bg-surface-container/40 backdrop-blur-[20px] rounded-[32px] overflow-hidden border border-white/5 glass-highlight hover:bg-surface-container-high/60 transition-all duration-500 cursor-pointer flex flex-col h-full">
+<div class="absolute inset-0 noise-texture pointer-events-none"></div>
+<div class="p-8 pb-4 flex-1">
+<div class="flex justify-between items-start mb-6">
+<div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary-fixed-dim group-hover:scale-110 transition-transform duration-500">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">javascript</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-secondary/10 text-secondary rounded-full">Completed</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-on-surface group-hover:text-primary transition-colors mb-2">Intro to JS</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2 mb-6">Foundational syntax and asynchronous logic for sophomore engineering cohorts.</p>
+<!-- Heatmap Pattern Thumbnail -->
+<div class="relative w-full h-24 bg-surface-container-lowest rounded-2xl overflow-hidden mb-6 flex items-end justify-between p-1 border border-white/5">
+<!-- Simulated Heatmap bars -->
+<div class="w-2 bg-primary/20 rounded-t-sm h-[40%]"></div>
+<div class="w-2 bg-primary/40 rounded-t-sm h-[60%]"></div>
+<div class="w-2 bg-secondary/60 rounded-t-sm h-[85%]"></div>
+<div class="w-2 bg-primary/30 rounded-t-sm h-[30%]"></div>
+<div class="w-2 bg-secondary/40 rounded-t-sm h-[70%]"></div>
+<div class="w-2 bg-primary/80 rounded-t-sm h-[95%]"></div>
+<div class="w-2 bg-primary/20 rounded-t-sm h-[45%]"></div>
+<div class="w-2 bg-secondary/70 rounded-t-sm h-[80%]"></div>
+<div class="w-2 bg-primary/50 rounded-t-sm h-[55%]"></div>
+<div class="w-2 bg-primary/20 rounded-t-sm h-[35%]"></div>
+<div class="absolute top-2 left-3 text-[9px] uppercase font-bold text-on-surface-variant/40 tracking-tighter">Student Engagement Heatmap</div>
+</div>
+</div>
+<div class="px-8 py-5 bg-white/5 flex items-center justify-between mt-auto">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-high bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of a young professional student with soft studio lighting and clean background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfC_63_r--YBCiRIk5hlAqkEesUyiuAMTZ2cFqf2Y32ZR9nOKfnlD3sg75clqLMq9hrNr_aARqJIxnonAtk12BSVO9rGVhTWy3dj2uJ4R_mqPZkaZEffHsxJ7xmJyftf7eiP7FBIAbsDiytQ2-ciQ01CIPWV2CRadAXkl6IkPCFLizOAdWnB-fI_-H4SRLo6Bpq2ICUHx90TTRTzriKRAZWjZEks2ReTE6JcPd-D0ACiCjJcEFZwfbR1QdS6OS77L5k9CpzLoId8c"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-high bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Portrait of a female graduate student with natural lighting and a warm friendly expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABJ0LIi18zPuHt7UM4UgV3mAWXlzRSKa7w22MjeBRa4WP9hp0gf7_mn8nArn_Toe0Of-SgU_Wg9BcTTnW_Rfn-PjX4bWAzi6hCxZ01qND1Z1cUPmhQ0n6FUE0UdgrKDaE8mjBwIWeq0Jdm_1gzTmwoJSsBWF_OTTVOAzygTsyvY1ybw2hE3VfjQMXKDioCicsd9_0LJqF5RXAaPWDox8NFERo1K4tXnQ2UsAIqUEWO0arE_cVlWxQDdErtM3l-mrpktcRJ8JKei2U"/>
+</div>
+</div>
+<span class="text-xs font-medium text-on-surface-variant">Last taught Oct 12</span>
+</div>
+</div>
+<!-- Card 2: Advanced CSS -->
+<div class="group relative bg-surface-container/40 backdrop-blur-[20px] rounded-[32px] overflow-hidden border border-white/5 glass-highlight hover:bg-surface-container-high/60 transition-all duration-500 cursor-pointer flex flex-col h-full">
+<div class="absolute inset-0 noise-texture pointer-events-none"></div>
+<div class="p-8 pb-4 flex-1">
+<div class="flex justify-between items-start mb-6">
+<div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary-fixed-dim group-hover:scale-110 transition-transform duration-500">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">css</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-primary/10 text-primary rounded-full">Draft</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-on-surface group-hover:text-primary transition-colors mb-2">Advanced CSS</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2 mb-6">Mastering Grid, Subgrid, and container queries for adaptive design systems.</p>
+<!-- Heatmap Pattern Thumbnail (Empty State variant) -->
+<div class="relative w-full h-24 bg-surface-container-lowest/50 rounded-2xl overflow-hidden mb-6 flex items-center justify-center border border-dashed border-outline-variant/30">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant/30 tracking-widest">No session data yet</span>
+</div>
+</div>
+<div class="px-8 py-5 bg-white/5 flex items-center justify-between mt-auto">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-on-surface-variant">schedule</span>
+<span class="text-xs font-medium text-on-surface-variant">Created 2 days ago</span>
+</div>
+</div>
+</div>
+<!-- Card 3: React Hooks -->
+<div class="group relative bg-surface-container/40 backdrop-blur-[20px] rounded-[32px] overflow-hidden border border-white/5 glass-highlight hover:bg-surface-container-high/60 transition-all duration-500 cursor-pointer flex flex-col h-full border-t-2 border-t-secondary/20">
+<div class="absolute inset-0 noise-texture pointer-events-none"></div>
+<div class="p-8 pb-4 flex-1">
+<div class="flex justify-between items-start mb-6">
+<div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-500">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cycle</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-secondary/10 text-secondary rounded-full">Highly Rated</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-on-surface group-hover:text-primary transition-colors mb-2">React Hooks</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2 mb-6">Deep dive into state management, effect cycles, and custom hook architecture.</p>
+<!-- Heatmap Pattern Thumbnail -->
+<div class="relative w-full h-24 bg-surface-container-lowest rounded-2xl overflow-hidden mb-6 flex items-end justify-between p-1 border border-white/5">
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[90%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[95%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[88%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[92%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[98%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[85%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[80%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[90%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[94%]"></div>
+<div class="w-2 bg-secondary/80 rounded-t-sm h-[82%]"></div>
+<div class="absolute top-2 left-3 text-[9px] uppercase font-bold text-secondary/60 tracking-tighter">Peak Retention Profile</div>
+</div>
+</div>
+<div class="px-8 py-5 bg-white/5 flex items-center justify-between mt-auto">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-secondary" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold text-on-surface">4.9 Impact Score</span>
+</div>
+<span class="text-xs font-medium text-on-surface-variant">Last taught Nov 02</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Refraction Pane (Signature Component) -->
+<section class="px-10 mb-20">
+<div class="relative bg-surface-container-high/40 backdrop-blur-[40px] rounded-[40px] p-10 border-t-2 border-secondary/30 overflow-hidden shadow-2xl">
+<div class="absolute inset-0 noise-texture pointer-events-none"></div>
+<div class="relative z-10 grid md:grid-cols-2 gap-12 items-center">
+<div>
+<div class="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-secondary/10 border border-secondary/20 mb-6">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="text-[10px] font-black uppercase tracking-widest text-secondary">AI Insight Oracle</span>
+</div>
+<h3 class="text-3xl font-headline font-bold text-on-surface mb-4">Class Performance Forecast</h3>
+<p class="text-on-surface-variant leading-relaxed mb-8">Based on your last 3 sessions, the "React Hooks" module shows a 12% increase in conceptual retention. We suggest running a quick "Refresher" session on <span class="text-primary font-bold">UseCallback</span> before starting the next block.</p>
+<div class="flex gap-4">
+<button class="px-6 py-3 rounded-xl bg-surface-container-highest text-on-surface font-bold text-sm border border-white/5 hover:bg-surface-container transition-colors">Review Full Report</button>
+<button class="px-6 py-3 rounded-xl bg-primary/20 text-primary-fixed-dim font-bold text-sm border border-primary/30 hover:bg-primary/30 transition-all">Optimize My Deck</button>
+</div>
+</div>
+<div class="relative flex justify-center">
+<div class="w-full max-w-sm aspect-square relative">
+<!-- Abstract AI Visualization -->
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/20 to-secondary/20 rounded-full blur-3xl opacity-40"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<svg fill="none" height="280" viewbox="0 0 200 200" width="280" xmlns="http://www.w3.org/2000/svg">
+<circle cx="100" cy="100" r="80" stroke="url(#paint0_linear)" stroke-dasharray="10 10" stroke-width="0.5"></circle>
+<circle cx="100" cy="100" r="60" stroke="url(#paint1_linear)" stroke-dasharray="5 5" stroke-width="1"></circle>
+<path d="M100 20L100 180" opacity="0.3" stroke="url(#paint2_linear)" stroke-width="0.5"></path>
+<path d="M20 100L180 100" opacity="0.3" stroke="url(#paint2_linear)" stroke-width="0.5"></path>
+<defs>
+<lineargradient gradientunits="userSpaceOnUse" id="paint0_linear" x1="20" x2="180" y1="20" y2="180">
+<stop stop-color="#c0c1ff"></stop>
+<stop offset="1" stop-color="#4ae176"></stop>
+</lineargradient>
+<lineargradient gradientunits="userSpaceOnUse" id="paint1_linear" x1="40" x2="160" y1="40" y2="160">
+<stop stop-color="#4ae176"></stop>
+<stop offset="1" stop-color="#c0c1ff" stop-opacity="0.2"></stop>
+</lineargradient>
+<lineargradient gradientunits="userSpaceOnUse" id="paint2_linear" x1="100" x2="100" y1="20" y2="180">
+<stop stop-color="#e0e2ea"></stop>
+<stop offset="1" stop-color="#e0e2ea" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-4xl font-headline font-black text-on-surface">94%</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Cognitive Sync</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar for Mobile (From JSON) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe bg-[#1c2025]/90 backdrop-blur-[24px] z-50 rounded-t-[32px] border-t border-[#e0e2ea]/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+<a class="flex flex-col items-center justify-center text-[#e0e2ea]/40 px-6 py-2 transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e0e2ea]/40 px-6 py-2 transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Class</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#8083ff]/15 text-[#c0c1ff] rounded-2xl px-6 py-2 shadow-[inset_0_0_10px_rgba(128,131,255,0.2)] transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bar_chart</span>
+<span class="text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Stats</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e0e2ea]/40 px-6 py-2 transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

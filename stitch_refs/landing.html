@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Plus+Jakarta+Sans:wght@500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#101419",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "secondary-container": "#00b954",
+                      "secondary-fixed-dim": "#4ae176",
+                      "outline-variant": "#464554",
+                      "surface-tint": "#c0c1ff",
+                      "surface-container": "#1c2025",
+                      "on-tertiary-container": "#3e2400",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-dim": "#101419",
+                      "surface-variant": "#31353b",
+                      "surface-container-lowest": "#0a0e13",
+                      "on-secondary-fixed-variant": "#005321",
+                      "on-primary-fixed": "#07006c",
+                      "on-surface-variant": "#c7c4d7",
+                      "outline": "#908fa0",
+                      "on-secondary-fixed": "#002109",
+                      "surface-container-high": "#262a30",
+                      "on-surface": "#e0e2ea",
+                      "primary-container": "#8083ff",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "inverse-on-surface": "#2d3136",
+                      "error-container": "#93000a",
+                      "on-error": "#690005",
+                      "on-primary": "#1000a9",
+                      "inverse-surface": "#e0e2ea",
+                      "primary-fixed": "#e1e0ff",
+                      "surface-bright": "#36393f",
+                      "secondary": "#4ae176",
+                      "on-tertiary-fixed": "#2a1700",
+                      "on-error-container": "#ffdad6",
+                      "error": "#ffb4ab",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-background": "#e0e2ea",
+                      "secondary-fixed": "#6bff8f",
+                      "on-primary-container": "#0d0096",
+                      "tertiary-fixed": "#ffddb8",
+                      "tertiary": "#ffb95f",
+                      "primary": "#c0c1ff",
+                      "inverse-primary": "#494bd6",
+                      "on-secondary-container": "#004119",
+                      "tertiary-container": "#ca8100",
+                      "surface-container-highest": "#31353b",
+                      "background": "#101419",
+                      "on-secondary": "#003915",
+                      "surface-container-low": "#181c21",
+                      "on-tertiary": "#472a00"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Plus Jakarta Sans"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          }
+        }
+      </script>
+<style>
+        body { background-color: #101419; color: #e0e2ea; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { backdrop-filter: blur(30px); }
+        .refraction-glow { background: radial-gradient(circle at center, rgba(128, 131, 255, 0.15) 0%, transparent 70%); }
+        .metallic-cta { background: linear-gradient(135deg, #c0c1ff 0%, #494bd6 100%); }
+      </style>
+</head>
+<body class="font-body selection:bg-primary/30 selection:text-primary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#101419]/60 backdrop-blur-[30px] border-b border-[#e0e2ea]/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+<div class="flex justify-between items-center px-8 h-20 max-w-7xl mx-auto w-full">
+<div class="text-2xl font-black text-[#e0e2ea] tracking-tighter font-headline">ClassTwin</div>
+<div class="hidden md:flex gap-10 font-['Plus_Jakarta_Sans'] font-medium tracking-tight text-sm">
+<a class="text-[#e0e2ea]/80 hover:text-[#e0e2ea] transition-all duration-300 transform active:scale-95" href="#">Features</a>
+<a class="text-[#e0e2ea]/80 hover:text-[#e0e2ea] transition-all duration-300 transform active:scale-95" href="#">Pricing</a>
+<a class="text-[#e0e2ea]/80 hover:text-[#e0e2ea] transition-all duration-300 transform active:scale-95" href="#contact">Contact</a>
+<a class="text-[#e0e2ea]/80 hover:text-[#e0e2ea] transition-all duration-300 transform active:scale-95" href="#">Case Studies</a>
+</div>
+<button class="bg-[#c0c1ff] text-[#07006c] px-6 py-2.5 rounded-full font-headline font-bold text-sm hover:opacity-80 transition-all duration-300 active:scale-95 transform">
+                Get Started
+            </button>
+</div>
+</nav>
+<main class="relative overflow-hidden pt-20">
+<!-- Background Atmosphere -->
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-[140%] h-[1000px] bg-[radial-gradient(circle_at_50%_0%,_rgba(99,102,241,0.15)_0%,_rgba(16,20,25,0)_60%)] -z-10"></div>
+<div class="absolute top-[10%] right-[10%] w-[400px] h-[400px] bg-secondary/5 blur-[120px] rounded-full -z-10"></div>
+<!-- Hero Section -->
+<section class="max-w-7xl mx-auto px-8 pt-24 pb-48 text-center relative">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container-high border border-outline-variant/15 mb-8">
+<span class="flex h-2 w-2 rounded-full bg-secondary"></span>
+<span class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant">Live Digital Twin Technology</span>
+</div>
+<h1 class="text-6xl md:text-8xl font-headline font-extrabold tracking-tighter text-on-surface mb-8 max-w-5xl mx-auto leading-[0.9]">
+                The First AI Digital Twin for <span class="text-primary italic">Your Classroom.</span>
+</h1>
+<p class="text-xl md:text-2xl text-on-surface-variant max-w-3xl mx-auto mb-12 leading-relaxed font-light">
+                Orchestrate high-fidelity learning experiences with real-time student comprehension monitoring.
+            </p>
+<div class="flex flex-col md:flex-row gap-6 justify-center items-center mb-24">
+<button class="metallic-cta text-on-primary px-10 py-5 rounded-2xl font-headline font-bold text-lg shadow-[0_20px_50px_rgba(73,75,214,0.3)] hover:scale-[1.02] transition-all active:scale-95">
+                    Start Your First Session
+                </button>
+<button class="glass-panel bg-surface-bright/10 border border-outline-variant/10 px-10 py-5 rounded-2xl font-headline font-bold text-lg text-on-surface hover:bg-surface-bright/20 transition-all">
+                    Watch Demo
+                </button>
+</div>
+<!-- Floating Dashboard Visual -->
+<div class="relative group">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-[40px] blur-2xl opacity-50 transition duration-1000 group-hover:opacity-100"></div>
+<div class="relative rounded-[40px] border border-outline-variant/20 overflow-hidden glass-panel bg-surface-container-low shadow-2xl mx-auto max-w-6xl aspect-[16/9]">
+<img class="w-full h-full object-cover opacity-90 mix-blend-screen" data-alt="futuristic teacher dashboard interface with holographic student data visualizations, neon status indicators, and clean glass typography on a dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9-udCVUatz_Np5nvav7CGoOAB7D9OKYFtIcuVaLlLQ3oZU8ZiWgLSq6vkSEkSpSpmQDivQ-hajE1DfsJpwVVYM98M03v9yMvdqW7JpeJBdhcWIvSiQawI6HC1BKU90q9SqsI9x8aQJYtaM17pPlfF4xQvad3uCaJxhTT-EGgOKUYcQV9A6Ptgg4u8w2V7jT2m4iNAd0WWfqYPcQ5sDcNijrYoIIduOJkY6GSLwxsr2lDxdV3eaflQtkls4btVvLvrPDzme22XZg8"/>
+<!-- UI Overlays -->
+<div class="absolute top-8 left-8 p-6 rounded-3xl glass-panel bg-surface-container-high/60 border border-outline-variant/10 w-64 text-left">
+<div class="label-sm uppercase tracking-widest text-primary mb-2 text-[10px] font-bold">Class Pulse</div>
+<div class="text-3xl font-headline font-bold text-on-surface">94%</div>
+<div class="text-xs text-secondary mt-1">Comprehension Peak</div>
+</div>
+<div class="absolute bottom-8 right-8 p-6 rounded-3xl glass-panel bg-surface-container-high/60 border border-outline-variant/10 w-72 text-left">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl">auto_awesome</span>
+</div>
+<div class="text-sm font-headline font-bold text-on-surface">AI Intervention</div>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">3 students are struggling with 'Quadratic Roots'. Suggested action: Trigger visual scaffold B.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Social Proof -->
+<section class="max-w-7xl mx-auto px-8 py-12">
+<p class="text-center font-label text-[10px] uppercase tracking-[0.3em] text-on-surface-variant/40 mb-12">Trusted by Innovation Hubs</p>
+<div class="flex flex-wrap justify-center items-center gap-16 opacity-30 grayscale contrast-125">
+<span class="text-2xl font-headline font-bold">OXFORD</span>
+<span class="text-2xl font-headline font-bold">STANFORD ED</span>
+<span class="text-2xl font-headline font-bold">MIT MEDIA LAB</span>
+<span class="text-2xl font-headline font-bold">HARVARD GSE</span>
+</div>
+</section>
+<!-- Feature Grid (Bento Style) -->
+<section class="max-w-7xl mx-auto px-8 py-32">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+<!-- Feature 1: Main -->
+<div class="md:col-span-7 group rounded-[3rem] p-12 glass-panel bg-surface-container-low border border-outline-variant/5 relative overflow-hidden flex flex-col justify-end min-h-[500px]">
+<div class="absolute top-0 right-0 p-12 w-1/2 h-full opacity-20 group-hover:opacity-40 transition-opacity">
+<span class="material-symbols-outlined text-[200px] text-primary">analytics</span>
+</div>
+<div class="relative z-10">
+<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-8 border border-primary/20">
+<span class="material-symbols-outlined text-primary-fixed-dim">query_stats</span>
+</div>
+<h3 class="text-4xl font-headline font-bold text-on-surface mb-6">Digital Twin Technology</h3>
+<p class="text-lg text-on-surface-variant max-w-md leading-relaxed">
+                            Create a real-time heatmap of student understanding. Every interaction is mapped to a digital mirror of your physical classroom.
+                        </p>
+</div>
+</div>
+<!-- Feature 2: Side -->
+<div class="md:col-span-5 group rounded-[3rem] p-12 glass-panel bg-surface-container-high border border-outline-variant/10 flex flex-col justify-between">
+<div class="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20">
+<span class="material-symbols-outlined text-secondary-fixed-dim">bolt</span>
+</div>
+<div>
+<h3 class="text-3xl font-headline font-bold text-on-surface mb-4">AI Interventions</h3>
+<p class="text-on-surface-variant leading-relaxed">
+                            Context-aware suggestions triggered the moment a student hits a cognitive block. Move from passive lecturing to active orchestration.
+                        </p>
+</div>
+</div>
+<!-- Feature 3: Side -->
+<div class="md:col-span-5 group rounded-[3rem] p-12 glass-panel bg-surface-container-high border border-outline-variant/10 flex flex-col justify-between">
+<div class="w-14 h-14 rounded-2xl bg-tertiary/10 flex items-center justify-center border border-tertiary/20">
+<span class="material-symbols-outlined text-tertiary-fixed-dim">history_edu</span>
+</div>
+<div>
+<h3 class="text-3xl font-headline font-bold text-on-surface mb-4">Reflective Loops</h3>
+<p class="text-on-surface-variant leading-relaxed">
+                            Generate longitudinal growth profiles for every student, automatically identifying hidden potential and systemic gaps.
+                        </p>
+</div>
+</div>
+<!-- Feature 4: Wide -->
+<div class="md:col-span-7 group rounded-[3rem] p-12 glass-panel bg-surface-container-low border border-outline-variant/5 relative overflow-hidden flex flex-col justify-center">
+<div class="flex flex-col md:flex-row gap-12 items-center">
+<div class="flex-1">
+<h3 class="text-4xl font-headline font-bold text-on-surface mb-6">Post-Session Insights</h3>
+<p class="text-lg text-on-surface-variant leading-relaxed">
+                                Review your teaching efficacy through a new lens. AI-powered analytics refine your future lesson plans based on actual student reception.
+                            </p>
+</div>
+<div class="w-full md:w-64 h-48 rounded-2xl bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover opacity-50 grayscale hover:grayscale-0 transition-all duration-700" data-alt="abstract financial data charts and colorful line graphs represented in a sleek modern digital UI style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsNyUkykHMeVrR4FCsm1ZqB3vSdUikS3gzEvO2o-Omgf4ExYR_S0KwGjU913Rkzep4sOd1uaYLMEOZyFq723Z3A822_sPXtHDLxEW7vpJ2sVxmDsgwWJHvNqoDwAR_Usl4nBwjB02sitz1LPQv8RpBicn4jNuuit_vAMzo2PXssqc3CyQN-CmfIDJ_AVEFivEDJ43SBiGJaDH3I0FKXcsJAK0kq3InFvqAPgSG53Hzlunsc0Iv5COd4QxwGvPv8XRL-q2A7NcVapA"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Section -->
+<section class="max-w-7xl mx-auto px-8 py-32 relative">
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[600px] bg-primary/10 blur-[150px] -z-10 rounded-full"></div>
+<div class="glass-panel bg-surface-container-low rounded-[4rem] p-16 md:p-24 border border-outline-variant/15 text-center shadow-inner shadow-indigo-500/5">
+<h2 class="text-5xl md:text-7xl font-headline font-extrabold text-on-surface mb-8 tracking-tight">Connect your classroom today.</h2>
+<p class="text-xl text-on-surface-variant mb-12 max-w-2xl mx-auto">
+                    Join over 2,500 educators redefining the limits of classroom intelligence. Experience the future of pedagogy.
+                </p>
+<div class="flex flex-col sm:flex-row gap-6 justify-center">
+<button class="metallic-cta text-on-primary px-12 py-5 rounded-2xl font-headline font-bold text-xl hover:scale-105 transition-all shadow-xl shadow-indigo-900/20">
+                        Get Started for Free
+                    </button>
+<button class="glass-panel bg-surface-container-highest border border-outline-variant/20 px-12 py-5 rounded-2xl font-headline font-bold text-xl text-on-surface hover:bg-surface-bright transition-all">
+                        Schedule a Demo
+                    </button>
+</div>
+</div>
+</section>
+<!-- Contact Section -->
+<section id="contact" class="max-w-7xl mx-auto px-8 py-24">
+  <div class="glass-panel bg-surface-container-low rounded-[3rem] p-8 md:p-16 border border-outline-variant/15">
+    <div class="grid md:grid-cols-2 gap-12">
+      <!-- Contact Form -->
+      <div>
+        <h2 class="text-4xl font-headline font-bold text-on-surface mb-2">Get in Touch</h2>
+        <p class="text-on-surface-variant mb-8">Have questions? We'd love to hear from you.</p>
+        <form class="space-y-6">
+          <input type="text" placeholder="Your Name" class="w-full px-6 py-4 rounded-2xl bg-surface-container-high border border-outline-variant/20 text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"/>
+          <input type="email" placeholder="Email Address" class="w-full px-6 py-4 rounded-2xl bg-surface-container-high border border-outline-variant/20 text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"/>
+          <textarea placeholder="Your Message" rows="4" class="w-full px-6 py-4 rounded-2xl bg-surface-container-high border border-outline-variant/20 text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"></textarea>
+          <button type="submit" class="metallic-cta text-on-primary px-8 py-4 rounded-2xl font-headline font-bold text-lg w-full hover:scale-[1.02] transition-all active:scale-95">
+            Send Message
+          </button>
+        </form>
+      </div>
+      <!-- Support Info -->
+      <div class="flex flex-col justify-center space-y-8">
+        <div>
+          <h3 class="text-2xl font-headline font-bold text-on-surface mb-6">Support Options</h3>
+          <div class="space-y-4">
+            <div class="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-high/50 border border-outline-variant/10">
+              <span class="material-symbols-outlined text-primary text-2xl">mail</span>
+              <div>
+                <div class="text-on-surface font-medium">Email Support</div>
+                <div class="text-on-surface-variant text-sm">support@classtwin.io</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-high/50 border border-outline-variant/10">
+              <span class="material-symbols-outlined text-secondary text-2xl">chat</span>
+              <div>
+                <div class="text-on-surface font-medium">Live Chat</div>
+                <div class="text-on-surface-variant text-sm">Available 24/7</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-high/50 border border-outline-variant/10">
+              <span class="material-symbols-outlined text-tertiary text-2xl">menu_book</span>
+              <div>
+                <div class="text-on-surface font-medium">Knowledge Base</div>
+                <div class="text-on-surface-variant text-sm">help.classtwin.io</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 rounded-2xl bg-surface-container-high/30 border border-outline-variant/10">
+          <div class="text-on-surface-variant text-sm mb-2">Hours</div>
+          <div class="text-on-surface font-medium">Mon - Fri, 9AM - 6PM EST</div>
+          <div class="text-on-surface-variant text-sm mt-2">Response time: Usually within 2 hours</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full rounded-t-[48px] mt-24 bg-[#181c21]/90 backdrop-blur-[40px] border-t border-[#e0e2ea]/10 shadow-inner shadow-indigo-500/5">
+<div class="max-w-7xl mx-auto px-12 py-20 flex flex-col md:flex-row justify-between items-center gap-8">
+<div class="flex flex-col items-center md:items-start gap-4">
+<div class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#e0e2ea]">ClassTwin</div>
+<p class="font-['Inter'] text-xs uppercase tracking-widest text-[#e0e2ea]/60">© 2024 ClassTwin. AI-Powered Excellence.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-[#e0e2ea]/40 hover:text-[#c0c1ff] transition-colors duration-300" href="#">Twitter</a>
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-[#e0e2ea]/40 hover:text-[#c0c1ff] transition-colors duration-300" href="#">LinkedIn</a>
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-[#e0e2ea]/40 hover:text-[#c0c1ff] transition-colors duration-300" href="#">Status</a>
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-[#e0e2ea]/40 hover:text-[#c0c1ff] transition-colors duration-300" href="#">Security</a>
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-[#e0e2ea]/40 hover:text-[#c0c1ff] transition-colors duration-300" href="#">Privacy</a>
+</div>
+</div>
+</footer>
+</body></html>

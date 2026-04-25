@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#c0c1ff",
+                        "secondary": "#4ae176",
+                        "surface-container": "#1c2025",
+                        "secondary-fixed": "#6bff8f",
+                        "background": "#101419",
+                        "tertiary-container": "#ca8100",
+                        "primary-container": "#8083ff",
+                        "tertiary": "#ffb95f",
+                        "on-tertiary-container": "#3e2400",
+                        "error": "#ffb4ab",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#e0e2ea",
+                        "outline": "#908fa0",
+                        "surface-variant": "#31353b",
+                        "on-primary-fixed": "#07006c",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "outline-variant": "#464554",
+                        "on-primary": "#1000a9",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e0e2ea",
+                        "surface-container-highest": "#31353b",
+                        "on-secondary-fixed": "#002109",
+                        "surface-container-high": "#262a30",
+                        "error-container": "#93000a",
+                        "on-background": "#e0e2ea",
+                        "secondary-fixed-dim": "#4ae176",
+                        "surface-container-low": "#181c21",
+                        "surface-tint": "#c0c1ff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "on-secondary": "#003915",
+                        "inverse-on-surface": "#2d3136",
+                        "on-tertiary": "#472a00",
+                        "inverse-primary": "#494bd6",
+                        "surface-dim": "#101419",
+                        "surface": "#101419",
+                        "surface-container-lowest": "#0a0e13",
+                        "on-surface-variant": "#c7c4d7",
+                        "primary-fixed": "#e1e0ff",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "secondary-container": "#00b954",
+                        "surface-bright": "#36393f",
+                        "on-secondary-fixed-variant": "#005321",
+                        "on-primary-container": "#0d0096",
+                        "on-secondary-container": "#004119",
+                        "tertiary-fixed": "#ffddb8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0b0f14;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(128, 131, 255, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(74, 225, 118, 0.05) 0px, transparent 50%);
+            min-height: 100vh;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .prism-glass {
+            background: rgba(28, 32, 37, 0.4);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(192, 193, 255, 0.1);
+        }
+        .refraction-edge {
+            border-top: 1px solid rgba(74, 225, 118, 0.3);
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="font-body text-on-surface antialiased overflow-hidden">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#181c21]/60 backdrop-blur-[30px] border-b border-indigo-500/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#e0e2ea] font-headline">ClassTwin</span>
+<div class="flex items-center gap-4">
+<span class="text-indigo-300 font-semibold font-headline tracking-tight">Question 2 of 5</span>
+<div class="h-1 w-24 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[40%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-low border border-outline-variant/20">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="text-xs font-label uppercase tracking-wider text-on-surface-variant">Live Responses: 28</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-indigo-400" data-icon="timer">timer</span>
+<span class="font-headline font-medium text-on-surface">12:45</span>
+</div>
+<span class="material-symbols-outlined text-[#e0e2ea]/60" data-icon="sensors">sensors</span>
+<button class="px-5 py-2 rounded-full border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/10 transition-all duration-300 active:scale-90">
+                    End Session
+                </button>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-32 px-8 h-screen flex gap-8">
+<!-- Left Section: Heatmap Grid -->
+<section class="flex-grow">
+<div class="grid grid-cols-4 lg:grid-cols-6 gap-4 h-full content-start overflow-y-auto pr-2 custom-scrollbar">
+<!-- Heatmap Cards -->
+<!-- Understood (Green) -->
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(74,225,118,0.2)]">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-secondary/30">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young male student in a classroom setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF6TptWVd4YcI6SIoxqUJEh_ijdDL5Kbqpobvg3nLOM8vpeNr17Vb-KZHbQmjm6x6p5EvBr7N9FmU58PRybxrfCbYcDBuXHRneW9KILrsOUlHr1ssPbOLaTyNFVxQ2waP_EAopdgcvwWKcXRFE0dvlQtbihrgO8Hy68hPdxmF_fZMg2yRLlZLAstBoh_ZPVOcLy7hbM9z5jtlmd7UuYJ0ZCkU10gLrclTQMXv6HaZTwVkMbl68VPRWIoNLfrOh2q6YDDu5kp1J7nE"/>
+</div>
+<span class="w-3 h-3 rounded-full bg-secondary shadow-[0_0_10px_#4ae176]"></span>
+</div>
+<div>
+<p class="text-xs text-on-surface/60 font-label">Student 01</p>
+<p class="text-sm font-semibold text-on-surface">Alex Chen</p>
+</div>
+</div>
+<!-- Confused (Red) -->
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(255,180,171,0.2)]">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-error/30">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young female student with glasses looking thoughtful" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbTIQvrqSPS9GveptsGRv98-DPxWpMjnjxzglKmdJmHlcyTIvDiFb6X3L5NOHU4KPh6nK0gVd01N8We12O4YcoSrBGKKMLMF0Y6_xpssNw9PDZHFzEtX2VZo2c0DXV-7JVaaTYRfgeCRuFNnjL1NrKvkvzFyUyW3vDPtTN9U-rLSvrXtV4TRf1Nw3rc6kX0aXI0fmN_Is8GlUXC9Nr7v7KSc1ATlslZk-u3zde6X8jfJpxRyFi_CgLwKlTT0qzDxOIrIOz3YUsEaA"/>
+</div>
+<span class="w-3 h-3 rounded-full bg-error shadow-[0_0_10px_#ffb4ab]"></span>
+</div>
+<div>
+<p class="text-xs text-on-surface/60 font-label">Student 02</p>
+<p class="text-sm font-semibold text-on-surface">Mia Wong</p>
+</div>
+</div>
+<!-- Partial (Amber) -->
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(255,185,95,0.2)]">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-tertiary/30">
+<img class="w-full h-full object-cover" data-alt="Portrait of a student with curly hair smiling slightly" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAezHZo4hpMmVCEHfLe84_xI4W4DDBMODegxgbK1ja0n9GcXB6TxM0FnLBHmj_WnATsZLRoFcOTNzALKI6djrRkjTpOlWcpoP6kmE6Z_3xp7fm4koVWfvOMyc8rJB5zJAHyEfY2JRRiGk2hC9gBtV68JQJuosqM1AAZlDypamLjxH5xDgsqwaClgjh_tIapdHfbNMM26FfPw7E6zjQqeng1nKnx36XS7KNJ0QXfUm1IqdO-4WFv59dkawNfhWT9fPSCzVdjmek0cXk"/>
+</div>
+<span class="w-3 h-3 rounded-full bg-tertiary shadow-[0_0_10px_#ffb95f]"></span>
+</div>
+<div>
+<p class="text-xs text-on-surface/60 font-label">Student 03</p>
+<p class="text-sm font-semibold text-on-surface">Jordan S.</p>
+</div>
+</div>
+<!-- Neutral -->
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group">
+<div class="flex justify-between items-start">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30">
+<img class="w-full h-full object-cover" data-alt="Portrait of a female student in professional attire" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmcpuNU8ckgiJvkVwmogis45QlanFQoouwR58QbjjAE0OKs4dtqQolybCO8ctc-P4v9nBak4BxI2PSOC42u8xuyE1sTu4ZVy_c_4cd1tJNnOZDhtDYVkjGH-MY7tYtn8qdorfeZDmHS3qq1EQZAIT4OrlQk_voNaaxmylkZahqGEulS4sWvEjGMi5SY0-gfONbpGJPSk78ClcgF-swUOCW11KEk-U2nUHzaCVJp3zs5V5wR8F6L98qlhEVJIn-0epPq5bZVsURBUw"/>
+</div>
+<span class="w-3 h-3 rounded-full bg-surface-container-highest"></span>
+</div>
+<div>
+<p class="text-xs text-on-surface/60 font-label">Student 04</p>
+<p class="text-sm font-semibold text-on-surface">Elena R.</p>
+</div>
+</div>
+<!-- Repetitive students for grid visualization -->
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(74,225,118,0.2)]">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-secondary"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 05</p><p class="text-sm font-semibold text-on-surface">Sam Taylor</p></div>
+</div>
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(74,225,118,0.2)]">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-secondary"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 06</p><p class="text-sm font-semibold text-on-surface">Liam N.</p></div>
+</div>
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(255,180,171,0.2)]">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-error"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 07</p><p class="text-sm font-semibold text-on-surface">Zoe Bell</p></div>
+</div>
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(74,225,118,0.2)]">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-secondary"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 08</p><p class="text-sm font-semibold text-on-surface">Chris P.</p></div>
+</div>
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(255,185,95,0.2)]">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-tertiary"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 09</p><p class="text-sm font-semibold text-on-surface">Noah J.</p></div>
+</div>
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(74,225,118,0.2)]">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-secondary"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 10</p><p class="text-sm font-semibold text-on-surface">Ava Liu</p></div>
+</div>
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group hover:shadow-[0_0_20px_rgba(74,225,118,0.2)]">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-secondary"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 11</p><p class="text-sm font-semibold text-on-surface">Leo G.</p></div>
+</div>
+<div class="prism-glass p-4 rounded-2xl aspect-square flex flex-col justify-between hover:-translate-y-1 transition-all duration-300 group">
+<div class="flex justify-between items-start"><div class="w-10 h-10 rounded-full bg-surface-container-high"></div><span class="w-3 h-3 rounded-full bg-surface-container-highest"></span></div>
+<div><p class="text-xs text-on-surface/60 font-label">Student 12</p><p class="text-sm font-semibold text-on-surface">Ruby K.</p></div>
+</div>
+</div>
+</section>
+<!-- Right Section: AI Insight Panel -->
+<aside class="w-[420px] flex flex-col gap-6 h-full overflow-y-auto pr-2 custom-scrollbar">
+<!-- Class Comprehension -->
+<div class="prism-glass p-6 rounded-3xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full"></div>
+<h3 class="text-sm font-label uppercase tracking-widest text-on-surface/60 mb-6">Class Comprehension</h3>
+<div class="flex items-center justify-center relative py-4">
+<svg class="w-40 h-40 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="8"></circle>
+<circle cx="80" cy="80" fill="transparent" r="70" stroke="url(#gradient)" stroke-dasharray="440" stroke-dashoffset="110" stroke-linecap="round" stroke-width="12"></circle>
+<defs>
+<lineargradient id="gradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#c0c1ff"></stop>
+<stop offset="100%" stop-color="#4ae176"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-4xl font-headline font-extrabold text-on-surface">75%</span>
+<span class="text-[10px] uppercase font-label tracking-tighter text-secondary">Strong Pulse</span>
+</div>
+</div>
+</div>
+<!-- AI Action Card -->
+<div class="prism-glass p-6 rounded-3xl refraction-edge relative group">
+<div class="absolute -inset-0.5 bg-gradient-to-br from-indigo-500/20 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-start gap-4 relative">
+<div class="p-3 rounded-2xl bg-primary/10">
+<span class="material-symbols-outlined text-primary" data-icon="psychology" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div class="flex-grow">
+<h4 class="text-xs font-label uppercase tracking-widest text-primary mb-2">AI Action</h4>
+<p class="text-lg font-headline font-bold text-on-surface leading-tight mb-4">Revisit recursion base case — multiple students are struggling</p>
+<button class="w-full py-3 rounded-2xl bg-primary-container text-on-primary-container font-bold text-sm hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="check_circle">check_circle</span>
+                            Mark as Done
+                        </button>
+</div>
+</div>
+</div>
+<!-- Confusion Hotspot -->
+<div class="prism-glass p-6 rounded-3xl border-l-4 border-l-tertiary">
+<h4 class="text-xs font-label uppercase tracking-widest text-tertiary mb-4">Confusion Hotspot</h4>
+<div class="space-y-4">
+<div class="flex flex-col gap-2">
+<div class="p-3 rounded-2xl rounded-tl-none bg-surface-container-high/60 backdrop-blur-sm border border-outline-variant/10 text-sm italic">
+                            "I don't get why the function calls itself..."
+                        </div>
+<div class="flex items-center gap-2 px-2">
+<div class="w-4 h-4 rounded-full bg-error/20 flex items-center justify-center"><span class="w-1.5 h-1.5 rounded-full bg-error"></span></div>
+<span class="text-[10px] text-on-surface/40 font-label">3 similar queries flagged</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Next Question -->
+<div class="prism-glass p-6 rounded-3xl bg-surface-container-high/40">
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<span class="text-sm font-headline font-bold">Up Next: Recursive Steps</span>
+<span class="text-[10px] font-label px-2 py-0.5 rounded bg-primary/20 text-primary">ADVANCED</span>
+</div>
+<div class="flex gap-3">
+<button class="flex-grow py-3 rounded-xl bg-surface-bright text-on-surface text-sm font-semibold hover:bg-surface-container-highest transition-colors active:scale-95">
+                            Modify Quest
+                        </button>
+<button class="flex-grow py-3 rounded-xl bg-gradient-to-r from-primary to-inverse-primary text-on-primary font-bold text-sm shadow-[0_0_20px_rgba(192,193,255,0.3)] active:scale-95 transition-all">
+                            Release Now
+                        </button>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- BottomNavBar (Stats) -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-2 p-2 mb-8 bg-[#1c2025]/40 backdrop-blur-[40px] rounded-full border border-indigo-500/15 shadow-[0_0_40px_rgba(99,102,241,0.15)]">
+<div class="flex items-center gap-2 px-6 py-2">
+<span class="material-symbols-outlined text-indigo-400 text-sm" data-icon="group">group</span>
+<div class="flex flex-col">
+<span class="text-[8px] font-label uppercase tracking-widest text-[#e0e2ea]/40">Students</span>
+<span class="text-xs font-headline font-bold text-on-surface">32/34</span>
+</div>
+</div>
+<div class="h-6 w-px bg-outline-variant/20"></div>
+<div class="flex flex-col items-center justify-center text-indigo-300 bg-indigo-500/10 rounded-full px-6 py-2">
+<span class="material-symbols-outlined text-sm" data-icon="psychology">psychology</span>
+<span class="text-[8px] font-label uppercase tracking-[0.05em] mt-0.5">Comprehension</span>
+</div>
+<div class="h-6 w-px bg-outline-variant/20"></div>
+<div class="flex items-center gap-2 px-6 py-2 group cursor-pointer hover:text-indigo-200 transition-colors">
+<span class="material-symbols-outlined text-indigo-400 text-sm" data-icon="schedule">schedule</span>
+<div class="flex flex-col">
+<span class="text-[8px] font-label uppercase tracking-widest text-[#e0e2ea]/40">Duration</span>
+<span class="text-xs font-headline font-bold text-on-surface">00:42:10</span>
+</div>
+</div>
+<div class="h-6 w-px bg-outline-variant/20"></div>
+<div class="flex items-center gap-2 px-6 py-2 group cursor-pointer hover:text-indigo-200 transition-colors">
+<span class="material-symbols-outlined text-indigo-400 text-sm" data-icon="speed">speed</span>
+<div class="flex flex-col">
+<span class="text-[8px] font-label uppercase tracking-widest text-[#e0e2ea]/40">Speed</span>
+<span class="text-xs font-headline font-bold text-on-surface">1.4s Avg</span>
+</div>
+</div>
+</div>
+<!-- Decorative Atmosphere -->
+<div class="fixed top-[20%] left-[10%] w-[30vw] h-[30vw] bg-indigo-900/10 blur-[150px] -z-10 rounded-full"></div>
+<div class="fixed bottom-0 right-0 w-[40vw] h-[40vw] bg-emerald-900/5 blur-[150px] -z-10 rounded-full"></div>
+</body></html>

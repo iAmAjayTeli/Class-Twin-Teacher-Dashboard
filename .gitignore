@@ -1,0 +1,12 @@
+node_modules/
+dist/
+
+# Environment files — NEVER commit these
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+*.log
+.DS_Store
