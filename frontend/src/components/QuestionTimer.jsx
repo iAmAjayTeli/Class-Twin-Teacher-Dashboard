@@ -1,3 +1,11 @@
+﻿/**
+ * QuestionTimer â€” Circular countdown timer for quiz rounds.
+ * Renders an SVG ring that animates from full to empty, with the
+ * remaining time displayed in MM:SS format. Turns red and glows
+ * when under 30 seconds remain.
+ *
+ * @param {{ duration: number, onComplete: () => void, isActive: boolean, label: string }} props
+ */
 import { useState, useEffect, useCallback } from 'react';
 
 export default function QuestionTimer({ duration = 120, onComplete, isActive = true, label = "Next Round" }) {
