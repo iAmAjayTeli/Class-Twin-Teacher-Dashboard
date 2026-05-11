@@ -12,6 +12,7 @@ const { getAIInsight } = require('./aiService');
 const { supabase, createUserClient } = require('./supabaseClient');
 const { generateToken, createRoom, deleteRoom, isTeacherInRoom, LIVEKIT_URL } = require('./livekitService');
 const { handleTwinChat, getClassroomState } = require('./twinChatService');
+const { translateText, translateBatch, detectLanguage, SUPPORTED_LANGUAGES } = require('./translationService');
 
 const app = express();
 const httpServer = createServer(app);
@@ -210,7 +211,7 @@ app.get('/api/dashboard/oracle', authMiddleware, async (req, res) => {
       try {
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           contents: `Act as an expert teaching assistant. Based on this recent class data:\n${summaryStr}\nProvide a single insightful sentence (max 25 words) advising the teacher on their overall class performance or what missing concept they might need to revisit. Also provide an overall "Cognitive Sync" score out of 100 as an integer based on the average confidences, adjusting higher or lower by up to 10 points depending on recent trends. Return valid JSON only: { "message": "...", "score": 85 }.`
         });
 
@@ -378,6 +379,129 @@ app.post('/api/sessions/:id/teacher-message', authMiddleware, async (req, res) =
     res.json({ success: true, message: inserted });
   } catch (err) {
     console.error('Teacher message error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════
+// Lingua Translation Endpoints
+// ═══════════════════════════════════════════════
+
+// List all supported languages
+app.get('/api/languages', (req, res) => {
+  res.json({ languages: SUPPORTED_LANGUAGES });
+});
+
+// Translate text (single language pair)
+app.post('/api/translate', async (req, res) => {
+  const { text, sourceLang, targetLang } = req.body;
+  if (!text || !targetLang) {
+    return res.status(400).json({ error: 'text and targetLang are required' });
+  }
+  try {
+    const translatedText = await translateText(text, sourceLang || 'en', targetLang);
+    res.json({ translatedText, sourceLang: sourceLang || 'en', targetLang });
+  } catch (err) {
+    console.error('Translation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Translate text to multiple languages at once
+app.post('/api/translate/batch', async (req, res) => {
+  const { text, sourceLang, targetLangs } = req.body;
+  if (!text || !targetLangs || !Array.isArray(targetLangs)) {
+    return res.status(400).json({ error: 'text and targetLangs[] are required' });
+  }
+  try {
+    const translations = await translateBatch(text, sourceLang || 'en', targetLangs);
+    res.json({ translations, sourceLang: sourceLang || 'en' });
+  } catch (err) {
+    console.error('Batch translation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Translate teacher message and broadcast to students grouped by language
+app.post('/api/sessions/:id/translate-message', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { message, translations: providedTranslations } = req.body;
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  try {
+    const userClient = createUserClient(req.accessToken);
+
+    // Verify session ownership
+    const { data: sessionRow, error: fetchErr } = await userClient
+      .from('sessions')
+      .select('id, join_code')
+      .eq('id', id)
+      .eq('created_by', req.user.id)
+      .single();
+
+    if (fetchErr || !sessionRow) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Insert original message
+    const { data: inserted, error: insertErr } = await supabase
+      .from('chat_messages')
+      .insert({
+        session_id: id,
+        student_name: 'Teacher',
+        message_text: message.trim(),
+        is_anonymous: false,
+        is_teacher: true,
+        student_id: null,
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      return res.status(500).json({ error: insertErr.message });
+    }
+
+    // Broadcast original message via socket
+    io.to(`session-${sessionRow.join_code}`).emit('teacher_message', {
+      id: inserted.id,
+      sessionId: id,
+      message: inserted.message_text,
+      sentAt: inserted.sent_at,
+    });
+
+    // Broadcast translations to students grouped by language
+    const translationsToSend = providedTranslations || {};
+    if (Object.keys(translationsToSend).length > 0) {
+      io.to(`session-${sessionRow.join_code}`).emit('translated_content', {
+        messageId: inserted.id,
+        originalText: message.trim(),
+        sourceLang: 'en',
+        translations: translationsToSend,
+        sentAt: inserted.sent_at,
+      });
+      console.log(`🌐 Translated message sent in ${Object.keys(translationsToSend).length} languages to session-${sessionRow.join_code}`);
+    }
+
+    res.json({ success: true, message: inserted, translations: translationsToSend });
+  } catch (err) {
+    console.error('Translate-message error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Detect language of student text
+app.post('/api/detect-language', async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'text is required' });
+  }
+  try {
+    const detectedLang = await detectLanguage(text);
+    res.json({ language: detectedLang });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -1174,11 +1298,27 @@ io.on('connection', (socket) => {
       const { data: sessionRow } = await supabase.from('sessions').select('id').eq('join_code', code).single();
       let dbStudents = [];
       if (sessionRow) {
-        const { data: sStudents } = await supabase.from('session_students').select('id, student_name, joined_at').eq('session_id', sessionRow.id);
+        // Fetch session students
+        const { data: sStudents } = await supabase
+          .from('session_students')
+          .select('id, student_name, joined_at')
+          .eq('session_id', sessionRow.id);
+
         if (sStudents) {
+          // Fetch language preferences from students table
+          const studentNames = sStudents.map(s => s.student_name);
+          const { data: studentProfiles } = await supabase
+            .from('students')
+            .select('name, language')
+            .in('name', studentNames);
+
+          const langMap = {};
+          (studentProfiles || []).forEach(p => { langMap[p.name] = p.language; });
+
           dbStudents = sStudents.map(s => ({
             id: s.id,
             name: s.student_name,
+            language: langMap[s.student_name] || 'en',
             status: 'neutral',
           }));
         }
@@ -1205,10 +1345,11 @@ io.on('connection', (socket) => {
 
   // Student joins session
   socket.on('join', (data, callback) => {
-    const { sessionCode, studentName } = data;
+    const { sessionCode, studentName, language } = data;
     const student = sessionManager.addStudent(sessionCode, {
       id: socket.id,
-      name: studentName
+      name: studentName,
+      language: language || 'en',
     });
 
     if (!student) {
@@ -1220,14 +1361,68 @@ io.on('connection', (socket) => {
     socket.sessionCode = sessionCode;
     socket.role = 'student';
     socket.studentId = socket.id;
+    socket.preferredLanguage = language || 'en';
 
-    // Notify teacher
+    // Notify teacher (include language for LiveTranscription)
     io.to(`teacher-${sessionCode}`).emit('student_joined', {
-      student,
+      student: { ...student, language: language || 'en' },
       totalStudents: Object.keys(sessionManager.getSession(sessionCode).students).length
     });
 
     if (callback) callback({ success: true, student });
+  });
+
+  // ── Lingua: Live translation broadcast (teacher speech → students) ──
+  socket.on('live_translation', async (data) => {
+    const { sessionCode: sCode, originalText, translations, sourceLang, timestamp } = data;
+    if (!sCode || !originalText) return;
+
+    // 1. Broadcast to web-based students via Socket.io
+    io.to(`session-${sCode}`).emit('translated_content', {
+      originalText,
+      sourceLang: sourceLang || 'en',
+      translations: translations || {},
+      timestamp: timestamp || Date.now(),
+    });
+
+    // 2. Persist to Supabase for Flutter mobile app (uses Supabase Realtime, not Socket.io)
+    try {
+      const { data: sessionRow } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('join_code', sCode)
+        .single();
+
+      if (sessionRow) {
+        await supabase.from('live_translations').insert({
+          session_id: sessionRow.id,
+          original_text: originalText,
+          source_lang: sourceLang || 'en',
+          translations: translations || {},
+        });
+      }
+    } catch (err) {
+      // Non-critical — log but don't break the socket flow
+      console.warn('⚠️ Failed to persist translation to Supabase:', err.message);
+    }
+
+    console.log(`🌐 Live translation broadcast to session-${sCode}: "${originalText.slice(0, 50)}..." → ${Object.keys(translations || {}).length} languages`);
+  });
+
+  // ── Lingua: Student changes preferred language mid-session ──
+  socket.on('set_language', (data) => {
+    const { language } = data;
+    if (!language || !socket.sessionCode) return;
+    
+    socket.preferredLanguage = language;
+    
+    // Notify teacher dashboard so LiveTranscription updates its target languages
+    io.to(`teacher-${socket.sessionCode}`).emit('student_language_changed', {
+      studentId: socket.id,
+      language,
+    });
+    
+    console.log(`🌐 Student ${socket.id} changed language to ${language} in session ${socket.sessionCode}`);
   });
 
   // Teacher starts session

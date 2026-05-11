@@ -496,7 +496,7 @@ Respond naturally as an AI teaching co-pilot. Reference specific data points. If
 
       while (callCount < MAX_CALLS) {
         response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           contents: messages,
           tools: twinTools,
         });
@@ -550,7 +550,7 @@ Respond naturally as an AI teaching co-pilot. Reference specific data points. If
         metadata: {
           dataPoints: context.stats?.dataPoints || 0,
           contextUsed: context.hasData,
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           toolCalls: callCount,
         },
       };

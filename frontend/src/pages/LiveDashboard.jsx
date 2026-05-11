@@ -97,7 +97,19 @@ export default function LiveDashboard() {
               <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_back</span>
               Back to Lobby
             </button>
-            <button onClick={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} style={{
+            <button onClick={async () => {
+              if (sessionId) await stopStream(sessionId);
+              const searchParams = new URLSearchParams({
+                code: sessionCode,
+                duration: String(elapsed),
+                students: String(students.length),
+                comprehension: String(comprehension),
+                understood: String(understood),
+                confused: String(confused),
+                partial: String(partial),
+              });
+              navigate(`/session-ended?${searchParams.toString()}`);
+            }} style={{
               padding: '7px 18px', borderRadius: '999px',
               border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: 600,
               background: '#FEE2E2', cursor: 'pointer', transition: 'all 0.2s',
@@ -276,7 +288,19 @@ export default function LiveDashboard() {
             </div>
             {!pipCollapsed && (
               <div style={{ padding: '10px', height: '200px' }}>
-                <LiveVideoRoom token={token} serverUrl={livekitUrl} onDisconnect={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} />
+                <LiveVideoRoom token={token} serverUrl={livekitUrl} onDisconnect={async () => {
+                  if (sessionId) await stopStream(sessionId);
+                  const searchParams = new URLSearchParams({
+                    code: sessionCode,
+                    duration: String(elapsed),
+                    students: String(students.length),
+                    comprehension: String(comprehension),
+                    understood: String(understood),
+                    confused: String(confused),
+                    partial: String(partial),
+                  });
+                  navigate(`/session-ended?${searchParams.toString()}`);
+                }} />
               </div>
             )}
           </div>

@@ -44,7 +44,7 @@ export default function Sidebar({ onStartSession }) {
     { icon: 'groups', label: 'Students', path: '/students', badge: null, end: true },
     { icon: 'auto_stories', label: 'Materials', path: '/materials', badge: null, end: true },
     { icon: 'monitoring', label: 'Insights', path: '/analytics', badge: '3', end: true },
-    { icon: 'neurology', label: 'Twin Engine', path: '/ai-tutor', badge: 'NEW', end: true },
+    { icon: 'neurology', label: 'Twin Engine', path: '/ai-tutor', badge: null, end: true },
   ];
 
   const generalItems = [
@@ -172,10 +172,10 @@ export default function Sidebar({ onStartSession }) {
           {!collapsed && (
             <div style={{ flex: 1 }}>
               <h1 className="font-headline" style={{ fontSize: '16px', fontWeight: 800, color: '#111827', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-                ClassTwin
+                ClassTwin <span style={{ color: '#4F46E5', fontWeight: 800 }}>Lingua</span>
               </h1>
               <p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9CA3AF', fontWeight: 600, marginTop: '1px' }}>
-                AI Teaching Engine
+                Multilingual AI Engine
               </p>
             </div>
           )}
