@@ -423,6 +423,29 @@ export default function LandingPage() {
               onMouseOut={e => e.currentTarget.style.color = 'var(--on-surface-variant)'}
             >{label}</a>
           ))}
+          <a
+            href="https://drive.google.com/uc?export=download&confirm=t&id=1ckWCV6dyK7quTh5-Lw2bwVtmQfFyst9-"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ripple-container"
+            id="app-download-btn"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '9px 20px',
+              background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+              color: '#fff', fontWeight: 600, fontSize: '13px',
+              borderRadius: '50px', textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative', overflow: 'hidden',
+            }}
+            onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.04)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(59, 130, 246, 0.4)'; }}
+            onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.3)'; }}
+            onClick={createRipple}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>download</span>
+            Student App
+          </a>
           <button onClick={(e) => { createRipple(e); handleAuth(); }} className="ct-btn-primary btn-premium ripple-container" style={{
             padding: '10px 24px',
             fontSize: '14px',

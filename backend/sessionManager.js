@@ -1,4 +1,10 @@
-// ClassTwin Session Manager — Room, QR, and Round Management
+﻿/**
+ * @module sessionManager
+ * @description In-memory session lifecycle manager. Handles session creation,
+ *              student enrollment, round progression, answer recording, and
+ *              QR code generation for the join flow.
+ */
+// ClassTwin Session Manager â€” Room, QR, and Round Management
 
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');

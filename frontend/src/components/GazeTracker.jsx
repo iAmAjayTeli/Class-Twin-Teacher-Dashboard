@@ -13,6 +13,7 @@ const LEFT_EYE_BOTTOM = 145;
 const RIGHT_EYE_TOP = 386;
 const RIGHT_EYE_BOTTOM = 374;
 
+
 // Head pose landmarks
 const NOSE_TIP = 1;
 const FOREHEAD = 10;
@@ -218,8 +219,8 @@ export default function GazeTracker({ onGazeData, enabled = true, showPreview = 
           width: '8px', height: '8px', borderRadius: '50%',
           backgroundColor: status === 'tracking' && faceDetected ? '#4ae176'
             : status === 'tracking' ? '#ffb95f'
-            : status === 'loading' ? '#c0c1ff'
-            : '#ff6b6b',
+              : status === 'loading' ? '#c0c1ff'
+                : '#ff6b6b',
           boxShadow: status === 'tracking' && faceDetected
             ? '0 0 8px rgba(74, 225, 118, 0.5)'
             : 'none',
@@ -228,9 +229,9 @@ export default function GazeTracker({ onGazeData, enabled = true, showPreview = 
         <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--on-surface-variant)' }}>
           {status === 'loading' ? 'Loading AI model...'
             : status === 'tracking' && faceDetected ? 'Tracking Active'
-            : status === 'tracking' ? 'No face detected'
-            : status === 'error' ? 'Camera error'
-            : 'Initializing...'}
+              : status === 'tracking' ? 'No face detected'
+                : status === 'error' ? 'Camera error'
+                  : 'Initializing...'}
         </span>
         {gazePoint && status === 'tracking' && (
           <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'rgba(192, 193, 255, 0.5)', fontFamily: 'monospace' }}>

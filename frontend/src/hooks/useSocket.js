@@ -1,3 +1,12 @@
+﻿/**
+ * useSocket â€” Custom React hook for managing the Socket.io connection
+ * to the ClassTwin backend. Handles teacher room join, real-time twin
+ * updates, student join events, quiz results, leaderboard syncing,
+ * and session lifecycle (create, start, next round, end).
+ *
+ * @param {string} sessionCode - The active session code to join
+ * @returns {object} Socket state and action methods
+ */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { supabase } from '../lib/supabase';
@@ -36,11 +45,11 @@ export default function useSocket(sessionCode) {
       socketRef.current = socket;
 
       socket.on('connect', () => {
-        console.log('🔌 Connected to ClassTwin server');
+        console.log('ðŸ”Œ Connected to ClassTwin server');
         setConnected(true);
         if (sessionCode) {
           socket.emit('join_teacher_room', { code: sessionCode }, (res) => {
-            console.log(`🏫 Joined teacher room for ${sessionCode}:`, res);
+            console.log(`ðŸ« Joined teacher room for ${sessionCode}:`, res);
             if (res?.students && res.students.length > 0) {
               setStudents(res.students);
             }
@@ -49,7 +58,7 @@ export default function useSocket(sessionCode) {
       });
 
       socket.on('disconnect', () => {
-        console.log('🔌 Disconnected from ClassTwin server');
+        console.log('ðŸ”Œ Disconnected from ClassTwin server');
         setConnected(false);
       });
 

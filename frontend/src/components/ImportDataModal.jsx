@@ -18,6 +18,7 @@ function parseCSV(text) {
   });
 }
 
+
 export default function ImportDataModal({ onClose, onImportComplete }) {
   const [step, setStep] = useState('upload'); // upload | preview | importing | done
   const [dragActive, setDragActive] = useState(false);

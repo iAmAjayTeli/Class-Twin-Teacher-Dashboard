@@ -1,10 +1,10 @@
-# ClassTwin Teacher Dashboard
+# ClassTwin Teacher Dashboard 
 
 ![ClassTwin Cover](https://via.placeholder.com/1200x400/111827/FFFFFF?text=ClassTwin+Teacher+Dashboard)
 
 An AI-powered, real-time teacher dashboard application that serves as the command center for modern live classrooms. The platform seamlessly integrates live video streaming, AI-generated quizzes, real-time engagement telemetry, and an intelligent AI co-pilot—empowering educators with deep, actionable insights.
 
-## ✨ Features
+## ✨ Features 
 
 - **🔴 Live Video Streaming & WebRTC:** Built on top of **LiveKit**, enabling educators to broadcast crystal-clear video to their students with robust auto-rejoin capabilities and live synchronization.
 - **🧠 AI-Powered Comprehension Tracking:** Leverages twin-engine AI edge functions to compute real-time classroom telemetry, seamlessly tracking risk profiles, engagement rates, and class health on a dynamic dashboard.
@@ -13,7 +13,7 @@ An AI-powered, real-time teacher dashboard application that serves as the comman
 - **🤖 Live AI Co-pilot (Twin Chat):** Allows the teacher to dialogue with a context-aware AI assistant during the session. The co-pilot acts as a second set of eyes, analyzing student telemetry, recommending immediate interventions, and alerting the teacher to drop-offs in engagement.
 - **🎨 Modern "Warm Minimalism" UI:** A beautifully crafted, premium interface built with React. Features include fluid micro-animations, glassmorphism overlays, rich data visualization, and an elegant dark/light theme scheme.
 
-## 🛠 Tech Stack
+## 🛠 Tech Stack 
 
 - **Frontend:** React, Vite, Socket.io-client, LiveKit React Components
 - **Backend:** Node.js, Express, Socket.io
@@ -21,7 +21,7 @@ An AI-powered, real-time teacher dashboard application that serves as the comman
 - **AI Integration:** Google Gemini API (`gemini-3-flash-preview`)
 - **Real-Time:** WebSockets, LiveKit (WebRTC)
 
-## 📁 Project Structure
+## 📁 Project Structure 
 
 ```text
 Class-Twin-Teacher-Dashboard/
@@ -31,7 +31,7 @@ Class-Twin-Teacher-Dashboard/
     └── functions/    # Deno-based Edge Functions (twin-chat, generate-quiz)
 ```
 
-## 🚀 Getting Started
+## 🚀 Getting Started 
 
 ### Prerequisites
 - Node.js (v16+)
@@ -93,3 +93,8 @@ Contributions, issues, and feature requests are welcome!
 
 ---
 *Developed for the future of education, blending human teaching with artificial intelligence.*
+ 
+ 
+ 
+ 
+ 

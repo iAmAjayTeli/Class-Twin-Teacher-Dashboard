@@ -1,4 +1,12 @@
-// useLiveKit — hook to fetch a LiveKit token and manage connection metadata
+﻿/**
+ * useLiveKit â€” Custom React hook for managing LiveKit WebRTC connections.
+ * Provides methods to start/stop/rejoin teacher streams and fetch viewer
+ * tokens for students. Includes a guard against duplicate stopStream calls
+ * that can occur from concurrent UI events.
+ *
+ * @returns {object} LiveKit connection state and stream control methods
+ */
+// useLiveKit â€” hook to fetch a LiveKit token and manage connection metadata
 
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
@@ -20,7 +28,7 @@ export default function useLiveKit() {
     return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
   };
 
-  /** Teacher: start stream — creates LiveKit room, gets publisher token */
+  /** Teacher: start stream â€” creates LiveKit room, gets publisher token */
   const startStream = useCallback(async (sessionId) => {
     setLoading(true);
     setError(null);
@@ -58,7 +66,7 @@ export default function useLiveKit() {
         headers: { 'Content-Type': 'application/json', ...headers },
       });
       if (!res.ok) {
-        // Session may no longer be streaming — not a hard error
+        // Session may no longer be streaming â€” not a hard error
         console.log('Rejoin stream: session not streaming or error');
         return null;
       }
@@ -76,11 +84,11 @@ export default function useLiveKit() {
     }
   }, []);
 
-  /** Stop stream — guarded against double-calls */
+  /** Stop stream â€” guarded against double-calls */
   const stopStream = useCallback(async (sessionId) => {
     // Prevent duplicate calls (DisconnectButton click + onDisconnected event)
     if (stoppingRef.current) {
-      console.log('⏩ stopStream already in progress, skipping duplicate call');
+      console.log('â© stopStream already in progress, skipping duplicate call');
       return;
     }
     stoppingRef.current = true;
@@ -96,7 +104,7 @@ export default function useLiveKit() {
         const errText = await res.text();
         console.error('stopStream API error:', errText);
       } else {
-        console.log('✅ Stream stopped successfully');
+        console.log('âœ… Stream stopped successfully');
       }
     } catch (err) {
       console.error('stopStream network error:', err);

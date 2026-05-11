@@ -1,7 +1,7 @@
-node_modules/
+﻿node_modules/
 dist/
 
-# Environment files — NEVER commit these
+# Environment files â€” NEVER commit these
 .env
 .env.local
 .env.*.local
@@ -10,3 +10,17 @@ frontend/.env
 
 *.log
 .DS_Store
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Build artifacts
+frontend/dist/
+*.tgz

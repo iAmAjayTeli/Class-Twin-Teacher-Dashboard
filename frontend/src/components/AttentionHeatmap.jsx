@@ -8,6 +8,7 @@ function heatColor(value) {
   // value: 0 (cold) to 1 (hot)
   const v = Math.max(0, Math.min(1, value));
   if (v < 0.25) {
+
     // Transparent → Blue
     const t = v / 0.25;
     return `rgba(99, 102, 241, ${t * 0.4})`;

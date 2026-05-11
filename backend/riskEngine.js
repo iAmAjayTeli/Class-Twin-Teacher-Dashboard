@@ -1,4 +1,10 @@
-// ClassTwin Risk Engine — Comprehension Scoring & Failure Prediction
+﻿/**
+ * @module riskEngine
+ * @description Calculates student comprehension scores and predicts
+ *              failure risk using a weighted algorithm based on accuracy,
+ *              response speed, and trend analysis.
+ */
+// ClassTwin Risk Engine â€” Comprehension Scoring & Failure Prediction
 
 const RISK_LEVELS = {
   ON_TRACK: 'ON_TRACK',

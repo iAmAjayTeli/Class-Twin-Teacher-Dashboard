@@ -593,6 +593,33 @@ app.get('/api/students', authMiddleware, async (req, res) => {
   }
 });
 
+// Get language distribution from students table
+app.get('/api/students/languages', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('language');
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Count occurrences of each language
+    const langCounts = {};
+    (data || []).forEach(row => {
+      const lang = row.language || 'Unknown';
+      langCounts[lang] = (langCounts[lang] || 0) + 1;
+    });
+
+    const distribution = Object.entries(langCounts)
+      .map(([language, count]) => ({ language, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.json({ total: data?.length || 0, distribution });
+  } catch (err) {
+    console.error('Error fetching language distribution:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get detailed stats for a specific student
 app.get('/api/students/:studentName/stats', authMiddleware, async (req, res) => {
   try {
@@ -690,14 +717,290 @@ app.get('/api/students/:studentName/stats', authMiddleware, async (req, res) => 
       })(),
     };
 
+    // ── Streak calculation (LeetCode-style) ──
+    // Sort ALL teacher sessions chronologically (oldest first)
+    const allSessionsSorted = (sessions || []).slice().sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
+    const attendedSessionIds = new Set(studentRows.map(sr => sr.session_id));
+
+    // Build attendance calendar: for each session, did this student attend?
+    const attendanceCalendar = allSessionsSorted.map(s => ({
+      sessionId: s.id,
+      topic: s.topic,
+      date: s.created_at,
+      attended: attendedSessionIds.has(s.id),
+    }));
+
+    // Compute current streak (from most recent session going backwards)
+    let currentStreak = 0;
+    for (let i = attendanceCalendar.length - 1; i >= 0; i--) {
+      if (attendanceCalendar[i].attended) currentStreak++;
+      else break;
+    }
+
+    // Compute max streak
+    let maxStreak = 0, tempStreak = 0;
+    for (const entry of attendanceCalendar) {
+      if (entry.attended) { tempStreak++; maxStreak = Math.max(maxStreak, tempStreak); }
+      else tempStreak = 0;
+    }
+
+    const totalTeacherSessions = allSessionsSorted.length;
+
+    const streakData = {
+      currentStreak,
+      maxStreak,
+      totalSessions: totalTeacherSessions,
+      attended: attendedSessionIds.size,
+      attendanceRate: totalTeacherSessions > 0 ? Math.round((attendedSessionIds.size / totalTeacherSessions) * 100) : 0,
+      calendar: attendanceCalendar,
+    };
+
     res.json({
       summary,
       sessionHistory,
       engagementLogs: allLogs,
       confidenceOverTime,
+      streakData,
     });
   } catch (err) {
     console.error('Error fetching student stats:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════
+// Student Report Generation & Send to Parents
+// ═══════════════════════════════════════════════
+
+// Generate a comprehensive student performance report
+app.get('/api/students/:studentName/report', authMiddleware, async (req, res) => {
+  try {
+    const { studentName } = req.params;
+    const userClient = createUserClient(req.accessToken);
+
+    // Get ALL sessions by this teacher (for total count)
+    const { data: allSessions, error: allSessErr } = await userClient
+      .from('sessions')
+      .select('id, topic, join_code, status, created_at')
+      .eq('created_by', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (allSessErr) return res.status(500).json({ error: allSessErr.message });
+    const totalTeacherSessions = (allSessions || []).length;
+    const allSessionIds = (allSessions || []).map(s => s.id);
+    if (allSessionIds.length === 0) return res.status(404).json({ error: 'No sessions found' });
+
+    // Get this student's session_students rows
+    const { data: studentRows, error: studErr } = await supabase
+      .from('session_students')
+      .select('*')
+      .eq('student_name', studentName)
+      .in('session_id', allSessionIds)
+      .order('joined_at', { ascending: false });
+
+    if (studErr) return res.status(500).json({ error: studErr.message });
+    if (!studentRows || studentRows.length === 0) return res.status(404).json({ error: 'Student not found' });
+
+    const sessionsAttended = studentRows.length;
+    const studentIds = studentRows.map(s => s.id);
+
+    // Get engagement logs
+    const { data: logs } = await supabase
+      .from('engagement_logs')
+      .select('*')
+      .in('student_id', studentIds)
+      .order('created_at', { ascending: true });
+
+    const allLogs = logs || [];
+
+    // Build session map
+    const sessionMap = {};
+    for (const s of allSessions) sessionMap[s.id] = s;
+
+    // Per-session breakdown
+    const sessionBreakdown = studentRows.map(sr => {
+      const pct = sr.total_answered > 0 ? Math.round((sr.total_correct / sr.total_answered) * 100) : null;
+      return {
+        topic: sessionMap[sr.session_id]?.topic || 'Unknown',
+        date: sr.joined_at,
+        status: sessionMap[sr.session_id]?.status || '',
+        score: `${sr.total_correct || 0}/${sr.total_answered || 0}`,
+        accuracy: pct,
+        risk: sr.risk || 'unknown',
+        comprehension: sr.comprehension,
+        mode: sr.mode,
+      };
+    });
+
+    // Aggregate stats
+    const totalCorrect = studentRows.reduce((s, r) => s + (r.total_correct || 0), 0);
+    const totalAnswered = studentRows.reduce((s, r) => s + (r.total_answered || 0), 0);
+    const overallAccuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : null;
+
+    const compSessions = studentRows.filter(r => r.comprehension != null);
+    const avgComprehension = compSessions.length > 0
+      ? Math.round(compSessions.reduce((s, r) => s + r.comprehension, 0) / compSessions.length)
+      : null;
+
+    // Engagement metrics from logs
+    const emotions = {};
+    const headPoses = {};
+    let gazeSum = 0, gazeCount = 0;
+    let presenceTrue = 0, presenceTotal = 0;
+    let tabActiveTrue = 0, tabActiveTotal = 0;
+    let confidenceSum = 0;
+
+    for (const log of allLogs) {
+      confidenceSum += log.confidence || 0;
+      const m = log.metrics || {};
+      if (m.emotion) emotions[m.emotion] = (emotions[m.emotion] || 0) + 1;
+      if (m.head_pose) headPoses[m.head_pose] = (headPoses[m.head_pose] || 0) + 1;
+      if (m.gaze_on_screen != null) { gazeSum += m.gaze_on_screen; gazeCount++; }
+      if (m.is_present != null) { presenceTotal++; if (m.is_present) presenceTrue++; }
+      if (m.tab_active != null) { tabActiveTotal++; if (m.tab_active) tabActiveTrue++; }
+    }
+
+    const avgConfidence = allLogs.length > 0 ? Math.round((confidenceSum / allLogs.length) * 100) : null;
+    const avgGaze = gazeCount > 0 ? Math.round((gazeSum / gazeCount) * 100) : null;
+    const presenceRate = presenceTotal > 0 ? Math.round((presenceTrue / presenceTotal) * 100) : null;
+    const tabActiveRate = tabActiveTotal > 0 ? Math.round((tabActiveTrue / tabActiveTotal) * 100) : null;
+
+    // Overall grade
+    const scores = [overallAccuracy, avgComprehension, avgConfidence].filter(v => v != null);
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+    let grade, gradeColor;
+    if (avgScore >= 80) { grade = 'Excellent'; gradeColor = '#1A5C3B'; }
+    else if (avgScore >= 60) { grade = 'Good'; gradeColor = '#1D4ED8'; }
+    else if (avgScore >= 40) { grade = 'Needs Improvement'; gradeColor = '#F59E0B'; }
+    else { grade = 'At Risk'; gradeColor = '#EF4444'; }
+
+    // AI Summary (optional, via Gemini)
+    let aiSummary = `${studentName} has attended ${sessionsAttended} out of ${totalTeacherSessions} sessions with an overall accuracy of ${overallAccuracy ?? 'N/A'}% and average comprehension of ${avgComprehension ?? 'N/A'}%. Current status: ${grade}.`;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey && apiKey !== 'your_gemini_api_key_here') {
+      try {
+        const ai = new GoogleGenAI({ apiKey });
+        const prompt = `You are a teacher's assistant writing a brief performance report for a parent.
+Student: ${studentName}
+Sessions Attended: ${sessionsAttended} out of ${totalTeacherSessions}
+Overall Quiz Accuracy: ${overallAccuracy ?? 'N/A'}%
+Average Comprehension: ${avgComprehension ?? 'N/A'}%
+Average Confidence: ${avgConfidence ?? 'N/A'}%
+Gaze Focus: ${avgGaze ?? 'N/A'}%
+Presence Rate: ${presenceRate ?? 'N/A'}%
+Grade: ${grade}
+
+Write a professional, warm 3-4 sentence summary for the parent about their child's performance, strengths, and areas for improvement. Be encouraging but honest. Return only the paragraph text, no JSON or markdown.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: prompt,
+        });
+        aiSummary = response.text.trim();
+      } catch (e) {
+        console.log('Gemini report summary error:', e.message);
+      }
+    }
+
+    const report = {
+      studentName,
+      generatedAt: new Date().toISOString(),
+      teacherName: req.user.user_metadata?.full_name || req.user.email || 'Teacher',
+      attendance: {
+        attended: sessionsAttended,
+        total: totalTeacherSessions,
+        percentage: totalTeacherSessions > 0 ? Math.round((sessionsAttended / totalTeacherSessions) * 100) : 0,
+      },
+      performance: {
+        overallAccuracy,
+        avgComprehension,
+        totalCorrect,
+        totalAnswered,
+        grade,
+        gradeColor,
+        avgScore,
+      },
+      engagement: {
+        avgConfidence,
+        avgGaze,
+        presenceRate,
+        tabActiveRate,
+      },
+      emotionDistribution: emotions,
+      headPoseDistribution: headPoses,
+      sessionBreakdown,
+      aiSummary,
+      studentEmail: studentRows.find(sr => sr.email)?.email || null,
+      studentId: studentRows[0]?.id || null,
+    };
+
+    console.log(`📋 Report generated for student: ${studentName}`);
+    res.json(report);
+  } catch (err) {
+    console.error('Error generating student report:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send report to parents (persist to Supabase)
+app.post('/api/students/:studentName/report/send', authMiddleware, async (req, res) => {
+  try {
+    const { studentName } = req.params;
+    const { report, email } = req.body;
+
+    if (!report) return res.status(400).json({ error: 'Report data is required' });
+
+    const userClient = createUserClient(req.accessToken);
+    const { data, error } = await userClient
+      .from('parent_reports')
+      .upsert({
+        student_name: studentName,
+        teacher_id: req.user.id,
+        report_data: report,
+        email: email || null,
+        student_id: report.studentId || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'student_name,teacher_id' })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Parent report upsert error:', error);
+      // If table doesn't exist, give a helpful error
+      if (error.message.includes('relation') && error.message.includes('does not exist')) {
+        return res.status(500).json({
+          error: 'parent_reports table not found. Please create it in Supabase.',
+          sql: `CREATE TABLE parent_reports (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  student_name text NOT NULL,
+  teacher_id uuid NOT NULL REFERENCES auth.users(id),
+  report_data jsonb NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(student_name, teacher_id)
+);`
+        });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`📨 Report sent to parents for: ${studentName}`);
+
+    // Also save email to session_students for future auto-fill
+    if (email) {
+      await supabase
+        .from('session_students')
+        .update({ email })
+        .eq('student_name', studentName);
+      console.log(`📧 Email saved for student: ${studentName}`);
+    }
+
+    res.json({ success: true, id: data?.id, sentAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('Error sending parent report:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1104,7 +1407,9 @@ app.get('/api/sessions/:id/quiz-results', authMiddleware, async (req, res) => {
       }
 
       const qResponses = (responses || []).filter(r => r.question_id === q.id);
-      const correctCount = qResponses.filter(r => r.response === q.correct_option).length;
+      // Students submit option TEXT, correct_option is INDEX — check both
+      const correctText = q.options?.[parseInt(q.correct_option, 10)];
+      const correctCount = qResponses.filter(r => r.response === q.correct_option || r.response === correctText).length;
 
       roundMap[q.round_number].questions.push({
         id: q.id,
@@ -1392,10 +1697,52 @@ io.on('connection', (socket) => {
 
       console.log(`📩 Quiz answer received: student ${dbStudentId}, question ${questionId}, answer ${answer}`);
 
+      // Update session_students score columns (total_correct, total_answered)
+      // First, determine if this answer is correct
+      const { data: questionRow } = await supabase
+        .from('questions')
+        .select('correct_option, options')
+        .eq('id', questionId)
+        .single();
+
+      let answerIsCorrect = false;
+      if (questionRow) {
+        const correctText = questionRow.options?.[parseInt(questionRow.correct_option, 10)];
+        answerIsCorrect = String(answer) === questionRow.correct_option || String(answer) === correctText;
+      }
+
+      // Increment total_answered (always) and total_correct (if correct)
+      const { error: updateErr } = await supabase.rpc('increment_student_score', {
+        p_student_id: dbStudentId,
+        p_is_correct: answerIsCorrect,
+      });
+
+      if (updateErr) {
+        // Fallback: manual update if RPC doesn't exist
+        const { data: currentStudent } = await supabase
+          .from('session_students')
+          .select('total_correct, total_answered')
+          .eq('id', dbStudentId)
+          .single();
+
+        if (currentStudent) {
+          await supabase
+            .from('session_students')
+            .update({
+              total_answered: (currentStudent.total_answered || 0) + 1,
+              total_correct: (currentStudent.total_correct || 0) + (answerIsCorrect ? 1 : 0),
+            })
+            .eq('id', dbStudentId);
+        }
+        console.log(`📊 Score updated (fallback): student ${dbStudentId}, correct: ${answerIsCorrect}`);
+      } else {
+        console.log(`📊 Score updated (rpc): student ${dbStudentId}, correct: ${answerIsCorrect}`);
+      }
+
       // Fetch updated results for this question and emit to teacher
       const { data: question } = await supabase
         .from('questions')
-        .select('correct_option, session_id')
+        .select('correct_option, session_id, options')
         .eq('id', questionId)
         .single();
 
@@ -1406,7 +1753,11 @@ io.on('connection', (socket) => {
           .eq('question_id', questionId);
 
         const totalResponses = allResponses?.length || 0;
-        const correctCount = (allResponses || []).filter(r => r.response === question.correct_option).length;
+        // Students submit option TEXT, correct_option is INDEX — resolve the correct answer text
+        const correctAnswerText = question.options?.[parseInt(question.correct_option, 10)];
+        const correctCount = (allResponses || []).filter(r =>
+          r.response === question.correct_option || r.response === correctAnswerText
+        ).length;
 
         // Get session join_code to find teacher room
         const { data: sess } = await supabase
@@ -1425,14 +1776,14 @@ io.on('connection', (socket) => {
             latestAnswer: {
               studentName: allResponses?.[allResponses.length - 1]?.session_students?.student_name || 'Unknown',
               answer: parseInt(String(answer), 10),
-              isCorrect: String(answer) === question.correct_option,
+              isCorrect: String(answer) === question.correct_option || String(answer) === correctAnswerText,
             },
           });
 
           // Fetch leaderboard data for the entire session
           const { data: sessionResponses } = await supabase
             .from('student_responses')
-            .select('response, responded_at, session_students!student_responses_student_id_fkey(student_name), questions!student_responses_question_id_fkey(correct_option)')
+            .select('response, responded_at, session_students!student_responses_student_id_fkey(student_name), questions!student_responses_question_id_fkey(correct_option, options)')
             .eq('session_id', sessionId);
 
           const scoreBoard = {};
@@ -1441,7 +1792,10 @@ io.on('connection', (socket) => {
               const studentName = r.session_students?.student_name || 'Unknown';
               if (!scoreBoard[studentName]) scoreBoard[studentName] = { name: studentName, score: 0, lastCorrectTime: 0 };
 
-              if (r.questions?.correct_option === String(r.response)) { // Ensure string matching
+              // Students submit option TEXT, correct_option is INDEX — check both
+              const correctText = r.questions?.options?.[parseInt(r.questions?.correct_option, 10)];
+              const isCorrect = String(r.response) === r.questions?.correct_option || String(r.response) === correctText;
+              if (isCorrect) {
                 scoreBoard[studentName].score += 10;
                 // Track fastest completion time for tie-breakers
                 const ansTime = new Date(r.responded_at || 0).getTime();
