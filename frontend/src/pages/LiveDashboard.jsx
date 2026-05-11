@@ -36,13 +36,39 @@ export default function LiveDashboard() {
   const { token, livekitUrl, stopStream } = useLiveKit();
   const [elapsed, setElapsed] = useState(0);
   const [pipCollapsed, setPipCollapsed] = useState(false);
+  const [sessionLive, setSessionLive] = useState(true);
 
-  const students = liveStudents?.length > 0 ? liveStudents : mockStudents;
+  const students = liveStudents?.length > 0 ? liveStudents : (sessionLive ? mockStudents : []);
 
+  // Check if session is actually streaming from DB
   useEffect(() => {
+    if (!sessionCode || sessionCode === 'ABC123') return;
+    const { default: sub } = { default: null };
+    import('../lib/supabase').then(({ supabase }) => {
+      supabase
+        .from('sessions')
+        .select('is_streaming, stream_started_at')
+        .eq('join_code', sessionCode)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setSessionLive(!!data.is_streaming);
+            // If still streaming, compute elapsed from stream_started_at
+            if (data.is_streaming && data.stream_started_at) {
+              const startedAt = new Date(data.stream_started_at).getTime();
+              setElapsed(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+            }
+          }
+        });
+    });
+  }, [sessionCode]);
+
+  // Elapsed timer — only run when session is live
+  useEffect(() => {
+    if (!sessionLive) return;
     const timer = setInterval(() => setElapsed(p => p + 1), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [sessionLive]);
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60).toString().padStart(2, '0');
@@ -79,15 +105,23 @@ export default function LiveDashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {/* LIVE badge */}
+            {/* LIVE badge — only when session is actually live */}
+            {sessionLive ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '999px', backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>
               <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#EF4444', animation: 'pulse-glow 2s ease-in-out infinite' }} />
               <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#DC2626', fontWeight: 700 }}>Live · {students.length} students</span>
             </div>
+            ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '999px', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB' }}>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6B7280', fontWeight: 700 }}>Session Ended</span>
+            </div>
+            )}
+            {sessionLive && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: '18px' }}>timer</span>
               <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--on-surface)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{formatTime(elapsed)}</span>
             </div>
+            )}
             <button onClick={() => navigate(`/lobby/${sessionCode}?sessionId=${sessionId || ''}`)} style={{
               padding: '7px 18px', borderRadius: '999px',
               border: '1px solid rgba(26,92,59,0.25)', color: '#1A5C3B', fontSize: '13px', fontWeight: 600,
@@ -98,6 +132,7 @@ export default function LiveDashboard() {
               Back to Lobby
             </button>
             <button onClick={async () => {
+              setSessionLive(false);
               if (sessionId) await stopStream(sessionId);
               const searchParams = new URLSearchParams({
                 code: sessionCode,

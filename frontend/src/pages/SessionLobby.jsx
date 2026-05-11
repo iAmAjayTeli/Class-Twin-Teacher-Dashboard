@@ -46,10 +46,19 @@ export default function SessionLobby() {
   // Realtime Leaderboard (from Supabase Realtime DB subscription)
   const [realtimeLeaderboard, setRealtimeLeaderboard] = useState([]);
 
-  // Merge socket-based and Supabase-based leaderboards — prefer whichever has more entries (more recent data)
-  const mergedLeaderboard = (socketLeaderboard && socketLeaderboard.length > 0)
-    ? socketLeaderboard
-    : realtimeLeaderboard;
+  // Merge both leaderboard sources — use whichever has more data (i.e. is most up-to-date)
+  const mergedLeaderboard = (() => {
+    const sock = socketLeaderboard || [];
+    const rt = realtimeLeaderboard || [];
+    // Merge: combine scores by student name, take the higher score from either source
+    const map = {};
+    [...sock, ...rt].forEach(s => {
+      if (!map[s.name] || s.score > map[s.name].score) {
+        map[s.name] = s;
+      }
+    });
+    return Object.values(map).sort((a, b) => b.score - a.score);
+  })();
 
   const joinUrl = `${window.location.origin.replace(':5173', ':5174')}/join?code=${sessionCode}`;
 
@@ -147,52 +156,66 @@ export default function SessionLobby() {
         setShowChatPanel(true);
       }).subscribe();
 
-    // Compute Leaderboard
+    // Compute Leaderboard from DB
     const fetchLeaderboard = async () => {
       if (!resolvedSessionId) return;
-      const { data: sessionResponses } = await supabase
-        .from('student_responses')
-        .select('response, responded_at, session_students!student_responses_student_id_fkey(student_name), questions!student_responses_question_id_fkey(correct_option)')
-        .eq('session_id', resolvedSessionId);
+      try {
+        const { data: sessionResponses, error } = await supabase
+          .from('student_responses')
+          .select('response, responded_at, session_students!student_responses_student_id_fkey(student_name), questions!student_responses_question_id_fkey(correct_option, options)')
+          .eq('session_id', resolvedSessionId);
 
-      const scoreBoard = {};
-      if (sessionResponses) {
-        sessionResponses.forEach(r => {
-          const studentName = r.session_students?.student_name || 'Unknown';
-          if (!scoreBoard[studentName]) scoreBoard[studentName] = { name: studentName, score: 0, lastCorrectTime: 0 };
-          
-          if (r.questions?.correct_option === String(r.response)) {
-            scoreBoard[studentName].score += 10;
-            const ansTime = new Date(r.responded_at || 0).getTime();
-            if (ansTime > scoreBoard[studentName].lastCorrectTime) {
-               scoreBoard[studentName].lastCorrectTime = ansTime;
+        if (error) { console.error('Leaderboard fetch error:', error); return; }
+
+        const scoreBoard = {};
+        if (sessionResponses) {
+          sessionResponses.forEach(r => {
+            const studentName = r.session_students?.student_name || 'Unknown';
+            if (!scoreBoard[studentName]) scoreBoard[studentName] = { name: studentName, score: 0, lastCorrectTime: 0 };
+
+            // Students submit option TEXT, correct_option is INDEX — check both
+            const correctText = r.questions?.options?.[parseInt(r.questions?.correct_option, 10)];
+            const isCorrect = String(r.response) === r.questions?.correct_option || String(r.response) === correctText;
+            if (isCorrect) {
+              scoreBoard[studentName].score += 10;
+              const ansTime = new Date(r.responded_at || 0).getTime();
+              if (ansTime > scoreBoard[studentName].lastCorrectTime) {
+                scoreBoard[studentName].lastCorrectTime = ansTime;
+              }
             }
-          }
-        });
-      }
+          });
+        }
 
-      const board = Object.values(scoreBoard)
-        .sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score;
-          return a.lastCorrectTime - b.lastCorrectTime;
-        })
-        .map(({ name, score }) => ({ name, score }));
-        
-      setRealtimeLeaderboard(board);
+        const board = Object.values(scoreBoard)
+          .sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return a.lastCorrectTime - b.lastCorrectTime;
+          })
+          .map(({ name, score }) => ({ name, score }));
+
+        setRealtimeLeaderboard(board);
+        console.log('🏆 Leaderboard refreshed:', board.length, 'entries');
+      } catch (err) { console.error('Leaderboard error:', err); }
     };
 
     fetchLeaderboard();
 
+    // Realtime subscription: listen for INSERT + UPDATE on student_responses
     const responseSub = supabase
       .channel(`student_responses:${resolvedSessionId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'student_responses', filter: `session_id=eq.${resolvedSessionId}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_responses', filter: `session_id=eq.${resolvedSessionId}` }, () => {
+        console.log('📡 student_responses changed — refreshing leaderboard');
         fetchLeaderboard();
       }).subscribe();
+
+    // Polling fallback: refresh every 5 seconds as a safety net
+    const pollInterval = setInterval(fetchLeaderboard, 5000);
 
     return () => {
       supabase.removeChannel(handSub);
       supabase.removeChannel(chatSub);
       supabase.removeChannel(responseSub);
+      clearInterval(pollInterval);
     };
   }, [resolvedSessionId]);
 
@@ -229,7 +252,11 @@ export default function SessionLobby() {
     } catch (err) {
       console.error('Error ending stream:', err);
     }
-    navigate(`/dashboard?code=${sessionCode}`);
+    // Clear stale live state so the lobby doesn't show ghost data
+    setLiveViewers([]);
+    setElapsed(0);
+    // Navigate to the analytics / sessions page — NOT the live dashboard
+    navigate('/analytics');
   };
 
   const handleSendTeacherReply = async () => {

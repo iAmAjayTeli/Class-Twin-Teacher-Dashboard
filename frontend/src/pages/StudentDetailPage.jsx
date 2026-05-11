@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import StudentReportModal from '../components/StudentReportModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { cacheGet, cacheSet, CACHE_KEYS, TTL } from '../lib/cache';
@@ -182,6 +183,11 @@ export default function StudentDetailPage() {
   const [assignmentResult, setAssignmentResult] = useState(null);
   const [sendingAssignment, setSendingAssignment] = useState(false);
   const [assignmentSent, setAssignmentSent] = useState(false);
+
+  // ── Report state ──
+  const [reportData, setReportData] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   // ── Time-range filter ──────────────────────────────────────────
   const [filterRange, setFilterRange] = useState('all');
@@ -446,6 +452,27 @@ export default function StudentDetailPage() {
     }
   }
 
+  // ── Report generation ──────────────────────────────────────────
+  async function fetchReport() {
+    setReportLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/students/${encodeURIComponent(studentName)}/report`,
+        { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
+      );
+      if (!res.ok) throw new Error('Failed to generate report');
+      const data = await res.json();
+      setReportData(data);
+      setShowReport(true);
+    } catch (err) {
+      console.error('Report generation error:', err);
+      alert('Failed to generate report: ' + err.message);
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
   // ─── Avatar initials ───────────────────────────────────────────
   const name = studentStats?.summary?.name || studentName || '';
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -524,44 +551,73 @@ export default function StudentDetailPage() {
               </div>
             </div>
 
-            {/* AI Predict Button */}
-            <motion.button
-              whileHover={{ scale: 1.04, boxShadow: '0 0 28px rgba(255,255,255,0.25)' }}
-              whileTap={{ scale: 0.97 }}
-              onClick={fetchAIPrediction}
-              disabled={predictionLoading || loadingStats}
-              style={{
-                padding: '13px 26px', borderRadius: '50px', border: 'none', cursor: predictionLoading ? 'wait' : 'pointer',
-                background: predictionLoading
-                  ? 'rgba(255,255,255,0.15)'
-                  : 'linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10))',
-                color: '#FFFFFF', fontWeight: 700, fontSize: '14px',
-                display: 'flex', alignItems: 'center', gap: '10px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.25)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-                transition: 'all 0.2s', whiteSpace: 'nowrap',
-                marginBottom: '8px',
-                fontFamily: 'Inter, sans-serif',
-              }}
-            >
-              {predictionLoading ? (
-                <>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px', animation: 'spin 1s linear infinite' }}>progress_activity</span>
-                  Analyzing with AI...
-                </>
-              ) : prediction ? (
-                <>
-                  <span className="material-symbols-outlined filled" style={{ fontSize: '20px' }}>psychology</span>
-                  Re-run AI Prediction
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined filled" style={{ fontSize: '20px' }}>psychology</span>
-                  AI Predict Pass / Fail
-                </>
-              )}
-            </motion.button>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              {/* Generate Report Button */}
+              <motion.button
+                whileHover={{ scale: 1.04, boxShadow: '0 0 28px rgba(255,255,255,0.25)' }}
+                whileTap={{ scale: 0.97 }}
+                onClick={fetchReport}
+                disabled={reportLoading || loadingStats}
+                style={{
+                  padding: '13px 26px', borderRadius: '50px', border: 'none', cursor: reportLoading ? 'wait' : 'pointer',
+                  background: reportLoading
+                    ? 'rgba(255,255,255,0.15)'
+                    : 'linear-gradient(135deg, rgba(59,130,246,0.35), rgba(59,130,246,0.15))',
+                  color: '#FFFFFF', fontWeight: 700, fontSize: '14px',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s', whiteSpace: 'nowrap',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                {reportLoading ? (
+                  <><span className="material-symbols-outlined" style={{ fontSize: '20px', animation: 'spin 1s linear infinite' }}>progress_activity</span> Generating Report...</>
+                ) : (
+                  <><span className="material-symbols-outlined filled" style={{ fontSize: '20px' }}>description</span> Generate Report</>
+                )}
+              </motion.button>
+
+              {/* AI Predict Button */}
+              <motion.button
+                whileHover={{ scale: 1.04, boxShadow: '0 0 28px rgba(255,255,255,0.25)' }}
+                whileTap={{ scale: 0.97 }}
+                onClick={fetchAIPrediction}
+                disabled={predictionLoading || loadingStats}
+                style={{
+                  padding: '13px 26px', borderRadius: '50px', border: 'none', cursor: predictionLoading ? 'wait' : 'pointer',
+                  background: predictionLoading
+                    ? 'rgba(255,255,255,0.15)'
+                    : 'linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10))',
+                  color: '#FFFFFF', fontWeight: 700, fontSize: '14px',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s', whiteSpace: 'nowrap',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                {predictionLoading ? (
+                  <>
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px', animation: 'spin 1s linear infinite' }}>progress_activity</span>
+                    Analyzing with AI...
+                  </>
+                ) : prediction ? (
+                  <>
+                    <span className="material-symbols-outlined filled" style={{ fontSize: '20px' }}>psychology</span>
+                    Re-run AI Prediction
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined filled" style={{ fontSize: '20px' }}>psychology</span>
+                    AI Predict Pass / Fail
+                  </>
+                )}
+              </motion.button>
+            </div>
           </div>
 
           {/* Wave divider */}
@@ -791,6 +847,155 @@ export default function StudentDetailPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* ── 🔥 Attendance Streak Card (Premium Redesign) ── */}
+              {studentStats.streakData && (() => {
+                const sd = studentStats.streakData;
+                const rate = sd.attendanceRate;
+                const rateColor = rate >= 80 ? '#10B981' : rate >= 50 ? '#F59E0B' : '#EF4444';
+                const ringSize = 120;
+                const ringR = (ringSize - 10) / 2;
+                const ringC = 2 * Math.PI * ringR;
+                const ringDash = ringC * (rate / 100);
+                return (
+                <motion.div variants={cardVariants} initial="hidden" animate="show">
+                  <SectionCard accentColor="#F59E0B">
+                    {/* Header Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #FCD34D' }}>
+                          <span className="material-symbols-outlined filled" style={{ fontSize: '17px', color: '#D97706' }}>local_fire_department</span>
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#111827', margin: 0, letterSpacing: '-0.01em' }}>Attendance Streak</h4>
+                          <p style={{ fontSize: '11px', color: '#9CA3AF', margin: 0 }}>{sd.attended} of {sd.totalSessions} sessions</p>
+                        </div>
+                      </div>
+                      <div style={{
+                        padding: '4px 14px', borderRadius: '50px',
+                        background: `${rateColor}12`, border: `1.5px solid ${rateColor}30`,
+                      }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: rateColor }}>{rate}% Attendance</span>
+                      </div>
+                    </div>
+
+                    {/* Main Content: Ring + Stats */}
+                    <div style={{ display: 'flex', gap: '32px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '28px' }}>
+
+                      {/* Attendance Ring */}
+                      <div style={{ position: 'relative', width: ringSize, height: ringSize, flexShrink: 0 }}>
+                        <svg width={ringSize} height={ringSize} style={{ transform: 'rotate(-90deg)' }}>
+                          <circle cx={ringSize / 2} cy={ringSize / 2} r={ringR} fill="transparent" stroke="#F3F4F6" strokeWidth="8" />
+                          <motion.circle cx={ringSize / 2} cy={ringSize / 2} r={ringR} fill="transparent" stroke={rateColor} strokeWidth="8"
+                            strokeLinecap="round"
+                            initial={{ strokeDasharray: `0 ${ringC}` }}
+                            animate={{ strokeDasharray: `${ringDash} ${ringC - ringDash}` }}
+                            transition={{ duration: 1.4, ease: 'easeOut', delay: 0.3 }}
+                          />
+                        </svg>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '28px', fontWeight: 900, color: '#111827', lineHeight: 1 }}>{rate}%</span>
+                          <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9CA3AF', fontWeight: 700, marginTop: '2px' }}>Rate</span>
+                        </div>
+                      </div>
+
+                      {/* Streak Stats */}
+                      <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '240px' }}>
+                        {[
+                          { icon: '🔥', value: sd.currentStreak, label: 'Current Streak', color: '#F59E0B', bg: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)', border: '#FDE68A' },
+                          { icon: '⚡', value: sd.maxStreak, label: 'Best Streak', color: '#8B5CF6', bg: 'linear-gradient(135deg, #F5F3FF, #EDE9FE)', border: '#DDD6FE' },
+                          { icon: '✅', value: sd.attended, label: 'Attended', color: '#10B981', bg: 'linear-gradient(135deg, #ECFDF5, #D1FAE5)', border: '#A7F3D0' },
+                        ].map((stat, idx) => (
+                          <motion.div
+                            key={stat.label}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 + idx * 0.1, duration: 0.5 }}
+                            style={{
+                              flex: 1, padding: '16px 10px', borderRadius: '16px', textAlign: 'center',
+                              background: stat.bg, border: `1.5px solid ${stat.border}`,
+                              minWidth: '70px',
+                            }}
+                          >
+                            <div style={{ fontSize: '22px', marginBottom: '2px' }}>{stat.icon}</div>
+                            <motion.div
+                              initial={{ scale: 0 }} animate={{ scale: 1 }}
+                              transition={{ type: 'spring', bounce: 0.4, delay: 0.4 + idx * 0.1 }}
+                              style={{ fontSize: '28px', fontWeight: 900, color: stat.color, lineHeight: 1 }}
+                            >
+                              {stat.value}
+                            </motion.div>
+                            <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6B7280', fontWeight: 700, marginTop: '6px' }}>{stat.label}</div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, #E5E7EB, transparent)', marginBottom: '20px' }} />
+
+                    {/* Attendance Heatmap */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '15px', color: '#6B7280' }}>calendar_month</span>
+                          <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6B7280', fontWeight: 700 }}>Session History</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#10B981' }} />
+                            <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 600 }}>Present</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#F3F4F6', border: '1px solid #E5E7EB' }} />
+                            <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 600 }}>Absent</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                        {sd.calendar.map((entry, i) => {
+                          const dateStr = new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                          return (
+                            <motion.div
+                              key={entry.sessionId}
+                              initial={{ opacity: 0, scale: 0.3 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: i * 0.025, duration: 0.35, ease: 'backOut' }}
+                              title={`${entry.topic} • ${dateStr}\n${entry.attended ? '✅ Present' : '❌ Absent'}`}
+                              style={{
+                                width: '32px', height: '32px', borderRadius: '8px',
+                                background: entry.attended ? '#10B981' : '#F9FAFB',
+                                border: entry.attended ? '1.5px solid #059669' : '1.5px solid #E5E7EB',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: entry.attended ? '0 2px 8px rgba(16,185,129,0.25)' : 'none',
+                              }}
+                              onMouseOver={e => {
+                                e.currentTarget.style.transform = 'scale(1.3) translateY(-2px)';
+                                e.currentTarget.style.boxShadow = entry.attended ? '0 6px 20px rgba(16,185,129,0.4)' : '0 4px 12px rgba(0,0,0,0.08)';
+                                e.currentTarget.style.zIndex = '10';
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                                e.currentTarget.style.boxShadow = entry.attended ? '0 2px 8px rgba(16,185,129,0.25)' : 'none';
+                                e.currentTarget.style.zIndex = '0';
+                              }}
+                            >
+                              {entry.attended
+                                ? <span className="material-symbols-outlined filled" style={{ fontSize: '14px', color: '#FFFFFF' }}>check</span>
+                                : <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#D1D5DB' }}>close</span>
+                              }
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </SectionCard>
+                </motion.div>
+                );
+              })()}
 
               {/* ── Engagement Metrics ── */}
               <SectionCard accentColor="#1A5C3B">
@@ -1092,6 +1297,15 @@ export default function StudentDetailPage() {
           )}
         </div>
       </main>
+
+      {/* Report Modal */}
+      {showReport && reportData && (
+        <StudentReportModal
+          report={reportData}
+          studentName={studentName}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 }
