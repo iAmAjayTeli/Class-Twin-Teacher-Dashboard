@@ -6,6 +6,7 @@ import LiveVideoRoom from '../components/LiveVideoRoom';
 import { QRCodeSVG } from 'qrcode.react';
 import Sidebar from '../components/Sidebar';
 import { supabase } from '../lib/supabase';
+import LiveTranscription from '../components/LiveTranscription';
 
 export default function SessionLobby() {
   const { code } = useParams();
@@ -15,7 +16,7 @@ export default function SessionLobby() {
   const [resolvedSessionId, setResolvedSessionId] = useState(sessionIdFromUrl || null);
   const [sessionSubject, setSessionSubject] = useState('');
 
-  const { students, qrCode, quizResults, leaderboard: socketLeaderboard } = useSocket(code);
+  const { socket, students, qrCode, quizResults, leaderboard: socketLeaderboard } = useSocket(code);
   const { token, livekitUrl, isStreaming, loading: lkLoading, error: lkError, startStream, stopStream, rejoinStream } = useLiveKit();
   const rejoinAttemptedRef = useRef(false);
 
@@ -61,7 +62,17 @@ export default function SessionLobby() {
 
   const joinUrl = `${window.location.origin.replace(':5173', ':5174')}/join?code=${sessionCode}`;
 
-  const joinedStudents = liveViewers.length > 0 ? liveViewers : (students || []);
+  // Merge liveViewers with student language data from socket (liveViewers from WebRTC lack language info)
+  const joinedStudents = (() => {
+    const base = liveViewers.length > 0 ? liveViewers : (students || []);
+    if (liveViewers.length > 0 && students?.length > 0) {
+      // Build a name→language lookup from socket students (has DB language data)
+      const langMap = {};
+      students.forEach(s => { if (s.language) langMap[s.name] = s.language; });
+      return base.map(v => ({ ...v, language: v.language || langMap[v.name] || 'en' }));
+    }
+    return base;
+  })();
 
   const handleParticipantsChange = useCallback((viewers) => {
     setLiveViewers(viewers);
@@ -265,6 +276,21 @@ export default function SessionLobby() {
       console.error('Failed to send reply:', err);
     } finally {
       setSendingReply(false);
+    }
+  };
+
+  // Lingua: send translated message to all student language groups
+  const handleSendTranslatedMessage = async ({ originalText, translations, sessionId: sid }) => {
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession?.access_token) return;
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/sessions/${sid}/translate-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession.access_token}` },
+        body: JSON.stringify({ message: originalText, translations }),
+      });
+    } catch (err) {
+      console.error('Failed to send translated message:', err);
     }
   };
 
@@ -825,6 +851,16 @@ export default function SessionLobby() {
             )}
 
             {/* Students list when streaming */}
+
+            {/* 🌐 Lingua Live Audio Translation */}
+            {isStreaming && (
+              <LiveTranscription
+                sessionId={resolvedSessionId}
+                students={joinedStudents.map(s => ({ name: s.name, language: s.language || 'en' }))}
+                socket={socket}
+                sessionCode={sessionCode}
+              />
+            )}
             {isStreaming && joinedStudents.length > 0 && (
               <div style={{ padding: '20px', borderRadius: '20px', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: 'var(--surface)', border: '1px solid var(--outline)', boxShadow: 'var(--shadow-sm)', maxHeight: '280px', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -13,6 +13,7 @@ import AITutor from './pages/AITutor';
 import AllSessions from './pages/AllSessions';
 import Settings from './pages/Settings';
 import HelpCenter from './pages/HelpCenter';
+import SessionEnded from './pages/SessionEnded';
 
 import TestStudentAssignment from './pages/TestStudentAssignment';
 
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
           <Route path="/students/:studentName" element={<ProtectedRoute><StudentDetailPage /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><PostSessionAnalytics /></ProtectedRoute>} />
+          <Route path="/session-ended" element={<ProtectedRoute><SessionEnded /></ProtectedRoute>} />
           <Route path="/materials" element={<ProtectedRoute><Materials /></ProtectedRoute>} />
           <Route path="/ai-tutor" element={<ProtectedRoute><AITutor /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

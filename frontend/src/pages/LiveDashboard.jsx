@@ -310,7 +310,19 @@ export default function LiveDashboard() {
             </div>
             {!pipCollapsed && (
               <div style={{ padding: '10px', height: '200px' }}>
-                <LiveVideoRoom token={token} serverUrl={livekitUrl} onDisconnect={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} />
+                <LiveVideoRoom token={token} serverUrl={livekitUrl} onDisconnect={async () => {
+                  if (sessionId) await stopStream(sessionId);
+                  const searchParams = new URLSearchParams({
+                    code: sessionCode,
+                    duration: String(elapsed),
+                    students: String(students.length),
+                    comprehension: String(comprehension),
+                    understood: String(understood),
+                    confused: String(confused),
+                    partial: String(partial),
+                  });
+                  navigate(`/session-ended?${searchParams.toString()}`);
+                }} />
               </div>
             )}
           </div>
