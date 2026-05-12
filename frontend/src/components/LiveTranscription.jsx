@@ -38,24 +38,47 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
 
     async function fetchLangs() {
       try {
-        // Get student names from session_students table
-        const { data: sessionStudents } = await supabase
-          .from('session_students')
-          .select('student_name')
-          .eq('session_id', sessionId);
+        // Strategy 1: Match by student names from props (socket-joined students)
+        const propNames = students.map(s => s.name).filter(Boolean);
+        
+        // Strategy 2: Also get ALL students with non-English language as fallback
+        // (mobile students may not appear in socket props at all)
+        let profiles = [];
 
-        if (!sessionStudents?.length) return;
+        if (propNames.length > 0) {
+          // Fetch language for known students
+          const { data } = await supabase
+            .from('students')
+            .select('name, email, language')
+            .in('name', propNames);
+          if (data) profiles = data;
+        }
 
-        const names = sessionStudents.map(s => s.student_name);
-        // Get their language preferences from students table
-        const { data: profiles } = await supabase
+        // Also fetch any students with non-English language who might be in this session
+        // Query by session_id if we have a livekit_participants or similar join table
+        // Fallback: get all non-English students (small table in classroom context)
+        const { data: multilingualStudents } = await supabase
           .from('students')
-          .select('name, language')
-          .in('name', names);
+          .select('name, email, language')
+          .neq('language', 'en')
+          .not('language', 'is', null);
 
-        if (!cancelled && profiles) {
+        if (multilingualStudents) {
+          // Merge — multilingual students take priority
+          multilingualStudents.forEach(ms => {
+            if (!profiles.find(p => p.email === ms.email)) {
+              profiles.push(ms);
+            }
+          });
+        }
+
+        if (!cancelled && profiles.length > 0) {
           const langMap = {};
-          profiles.forEach(p => { langMap[p.name] = p.language || 'en'; });
+          profiles.forEach(p => { 
+            if (p.language && p.language !== '') {
+              langMap[p.name] = p.language; 
+            }
+          });
           console.log('📡 Fetched student languages from DB:', langMap);
           setDbStudentLangs(langMap);
         }
@@ -68,7 +91,7 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
     // Re-fetch every 15s to pick up new students
     const interval = setInterval(fetchLangs, 15000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [sessionId]);
+  }, [sessionId, students]);
 
   // Merge prop languages with DB languages (DB takes priority)
   const enrichedStudents = students.map(s => ({
