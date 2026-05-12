@@ -1,4 +1,4 @@
-﻿/**
+/**
  * useSocket â€” Custom React hook for managing the Socket.io connection
  * to the ClassTwin backend. Handles teacher room join, real-time twin
  * updates, student join events, quiz results, leaderboard syncing,

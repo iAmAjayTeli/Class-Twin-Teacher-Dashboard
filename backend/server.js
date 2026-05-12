@@ -1699,12 +1699,19 @@ io.on('connection', (socket) => {
         .single();
 
       if (sessionRow) {
-        await supabase.from('live_translations').insert({
+        const { error: insertErr } = await supabase.from('live_translations').insert({
           session_id: sessionRow.id,
           original_text: originalText,
           source_lang: sourceLang || 'en',
           translations: translations || {},
         });
+        if (insertErr) {
+          console.error('❌ live_translations insert failed:', insertErr.message, insertErr.details, insertErr.hint);
+        } else {
+          console.log('✅ Translation persisted to Supabase for mobile students');
+        }
+      } else {
+        console.warn('⚠️ No session found for code:', sCode, '— translations won\'t reach mobile students');
       }
     } catch (err) {
       // Non-critical — log but don't break the socket flow

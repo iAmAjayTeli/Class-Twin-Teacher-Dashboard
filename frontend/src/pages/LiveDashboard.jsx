@@ -4,6 +4,7 @@ import useSocket from '../hooks/useSocket';
 import useLiveKit from '../hooks/useLiveKit';
 import LiveVideoRoom from '../components/LiveVideoRoom';
 import Sidebar from '../components/Sidebar';
+import LiveTranscription from '../components/LiveTranscription';
 
 const mockStudents = [
   { id: 1, name: 'Alex Chen', status: 'understood', label: 'Student 01' },
@@ -32,7 +33,7 @@ export default function LiveDashboard() {
   const navigate = useNavigate();
   const sessionCode = params.get('code') || 'ABC123';
   const sessionId   = params.get('sessionId') || null;
-  const { students: liveStudents, aiInsight, classHealth, leaderboard } = useSocket(sessionCode);
+  const { socket, students: liveStudents, aiInsight, classHealth, leaderboard } = useSocket(sessionCode);
   const { token, livekitUrl, stopStream } = useLiveKit();
   const [elapsed, setElapsed] = useState(0);
   const [pipCollapsed, setPipCollapsed] = useState(false);
@@ -277,6 +278,16 @@ export default function LiveDashboard() {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* 🌐 Lingua Live Audio Translation */}
+            {sessionLive && (
+              <LiveTranscription
+                sessionId={sessionId}
+                students={students.map(s => ({ name: s.name, language: s.language || 'en' }))}
+                socket={socket}
+                sessionCode={sessionCode}
+              />
             )}
 
             {/* Stats summary */}
