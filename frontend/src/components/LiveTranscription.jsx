@@ -95,8 +95,9 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
   });
 
   // Handle finalized transcript segment — translate and broadcast
+  // Handle finalized transcript segment — translate and broadcast
   const handleTranscript = useCallback(async (text) => {
-    if (!text.trim() || processingRef.current) return;
+    if (!text.trim()) return;
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const newEntry = { text, timestamp, translations: null, id: Date.now() };
@@ -104,9 +105,8 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
     setTranscripts(prev => [...prev.slice(-30), newEntry]); // Keep last 30 segments
     setStats(prev => ({ ...prev, segments: prev.segments + 1 }));
 
-    // Translate to all student languages
-    const targetLangs = studentLanguages.length > 0 ? studentLanguages : ['hi']; // Default to Hindi if no preference
-    processingRef.current = true;
+    // Translate to all student languages (fire immediately, no blocking)
+    const targetLangs = studentLanguages.length > 0 ? studentLanguages : ['hi'];
 
     try {
       const res = await fetch(`${API_URL}/api/translate/batch`, {
@@ -144,8 +144,6 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
       }
     } catch (err) {
       console.error('Translation pipeline error:', err);
-    } finally {
-      processingRef.current = false;
     }
   }, [studentLanguages, socket, sessionCode, sessionId]);
 

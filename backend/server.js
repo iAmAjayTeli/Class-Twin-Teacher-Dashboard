@@ -1678,11 +1678,13 @@ io.on('connection', (socket) => {
   });
 
   // ── Lingua: Live translation broadcast (teacher speech → students) ──
-  socket.on('live_translation', async (data) => {
+  // Session ID cache to avoid repeated DB lookups
+  const sessionIdCache = {};
+  socket.on('live_translation', (data) => {
     const { sessionCode: sCode, originalText, translations, sourceLang, timestamp } = data;
     if (!sCode || !originalText) return;
 
-    // 1. Broadcast to web-based students via Socket.io
+    // 1. Broadcast to web-based students via Socket.io (INSTANT — no await)
     io.to(`session-${sCode}`).emit('translated_content', {
       originalText,
       sourceLang: sourceLang || 'en',
@@ -1690,35 +1692,39 @@ io.on('connection', (socket) => {
       timestamp: timestamp || Date.now(),
     });
 
-    // 2. Persist to Supabase for Flutter mobile app (uses Supabase Realtime, not Socket.io)
-    try {
-      const { data: sessionRow } = await supabase
-        .from('sessions')
-        .select('id')
-        .eq('join_code', sCode)
-        .single();
-
-      if (sessionRow) {
-        const { error: insertErr } = await supabase.from('live_translations').insert({
-          session_id: sessionRow.id,
-          original_text: originalText,
-          source_lang: sourceLang || 'en',
-          translations: translations || {},
-        });
-        if (insertErr) {
-          console.error('❌ live_translations insert failed:', insertErr.message, insertErr.details, insertErr.hint);
-        } else {
-          console.log('✅ Translation persisted to Supabase for mobile students');
-        }
-      } else {
-        console.warn('⚠️ No session found for code:', sCode, '— translations won\'t reach mobile students');
-      }
-    } catch (err) {
-      // Non-critical — log but don't break the socket flow
-      console.warn('⚠️ Failed to persist translation to Supabase:', err.message);
-    }
-
     console.log(`🌐 Live translation broadcast to session-${sCode}: "${originalText.slice(0, 50)}..." → ${Object.keys(translations || {}).length} languages`);
+
+    // 2. Persist to Supabase for Flutter mobile app (fire-and-forget, non-blocking)
+    (async () => {
+      try {
+        let dbSessionId = sessionIdCache[sCode];
+        if (!dbSessionId) {
+          const { data: sessionRow } = await supabase
+            .from('sessions')
+            .select('id')
+            .eq('join_code', sCode)
+            .single();
+          if (sessionRow) {
+            dbSessionId = sessionRow.id;
+            sessionIdCache[sCode] = dbSessionId;
+          }
+        }
+
+        if (dbSessionId) {
+          const { error: insertErr } = await supabase.from('live_translations').insert({
+            session_id: dbSessionId,
+            original_text: originalText,
+            source_lang: sourceLang || 'en',
+            translations: translations || {},
+          });
+          if (insertErr) {
+            console.error('❌ live_translations insert failed:', insertErr.message);
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ Failed to persist translation to Supabase:', err.message);
+      }
+    })();
   });
 
   // ── Lingua: Student changes preferred language mid-session ──
