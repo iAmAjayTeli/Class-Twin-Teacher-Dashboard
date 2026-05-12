@@ -1702,7 +1702,7 @@ io.on('connection', (socket) => {
         const audioMap = await synthesizeBatch(translations || {});
         const audioLangs = Object.keys(audioMap);
         if (audioLangs.length > 0) {
-          console.log(`ðŸ”Š Neural TTS generated for: ${audioLangs.join(', ')}`);
+          console.log('Neural TTS generated for: ' + audioLangs.join(', '));
         }
 
         // Look up session ID (cached)
@@ -1720,32 +1720,25 @@ io.on('connection', (socket) => {
         }
 
         if (dbSessionId) {
-          const payload = {
+          // Merge audio into translations JSONB (no schema change needed)
+          // Format: { "kn": "text", "audio_kn": "base64wav...", "hi": "text", "audio_hi": "..." }
+          const mergedTranslations = { ...(translations || {}) };
+          for (const [lang, audioData] of Object.entries(audioMap)) {
+            mergedTranslations['audio_' + lang] = audioData;
+          }
+
+          const { error: insertErr } = await supabase.from('live_translations').insert({
             session_id: dbSessionId,
             original_text: originalText,
             source_lang: sourceLang || 'en',
-            translations: translations || {},
-          };
-
-          // Include audio if we have any
-          if (Object.keys(audioMap).length > 0) {
-            payload.audio = audioMap;
-          }
-
-          const { error: insertErr } = await supabase.from('live_translations').insert(payload);
+            translations: mergedTranslations,
+          });
           if (insertErr) {
-            // If audio column doesn't exist yet, retry without it
-            if (insertErr.message?.includes('audio') || insertErr.code === '42703') {
-              console.warn('âš ï¸ audio column missing, inserting without audio');
-              delete payload.audio;
-              await supabase.from('live_translations').insert(payload);
-            } else {
-              console.error('âŒ live_translations insert failed:', insertErr.message);
-            }
+            console.error('live_translations insert failed:', insertErr.message);
           }
         }
       } catch (err) {
-        console.warn('âš ï¸ Failed to persist translation/audio to Supabase:', err.message);
+        console.warn('Failed to persist translation/audio to Supabase:', err.message);
       }
     })();
   });
