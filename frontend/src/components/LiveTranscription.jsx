@@ -38,24 +38,23 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
 
     async function fetchLangs() {
       try {
-        // Get student names from session_students table
-        const { data: sessionStudents } = await supabase
-          .from('session_students')
-          .select('student_name')
-          .eq('session_id', sessionId);
+        // Get names of students actually in this session (from socket/LiveKit props)
+        const propNames = students.map(s => s.name).filter(Boolean);
+        if (propNames.length === 0) return;
 
-        if (!sessionStudents?.length) return;
-
-        const names = sessionStudents.map(s => s.student_name);
-        // Get their language preferences from students table
+        // Fetch their language preferences from the students table
         const { data: profiles } = await supabase
           .from('students')
           .select('name, language')
-          .in('name', names);
+          .in('name', propNames);
 
-        if (!cancelled && profiles) {
+        if (!cancelled && profiles && profiles.length > 0) {
           const langMap = {};
-          profiles.forEach(p => { langMap[p.name] = p.language || 'en'; });
+          profiles.forEach(p => { 
+            if (p.language && p.language !== '') {
+              langMap[p.name] = p.language; 
+            }
+          });
           console.log('📡 Fetched student languages from DB:', langMap);
           setDbStudentLangs(langMap);
         }
@@ -68,7 +67,7 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
     // Re-fetch every 15s to pick up new students
     const interval = setInterval(fetchLangs, 15000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [sessionId]);
+  }, [sessionId, students]);
 
   // Merge prop languages with DB languages (DB takes priority)
   const enrichedStudents = students.map(s => ({
@@ -96,8 +95,9 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
   });
 
   // Handle finalized transcript segment — translate and broadcast
+  // Handle finalized transcript segment — translate and broadcast
   const handleTranscript = useCallback(async (text) => {
-    if (!text.trim() || processingRef.current) return;
+    if (!text.trim()) return;
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const newEntry = { text, timestamp, translations: null, id: Date.now() };
@@ -105,9 +105,8 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
     setTranscripts(prev => [...prev.slice(-30), newEntry]); // Keep last 30 segments
     setStats(prev => ({ ...prev, segments: prev.segments + 1 }));
 
-    // Translate to all student languages
-    const targetLangs = studentLanguages.length > 0 ? studentLanguages : ['hi']; // Default to Hindi if no preference
-    processingRef.current = true;
+    // Translate to all student languages (fire immediately, no blocking)
+    const targetLangs = studentLanguages.length > 0 ? studentLanguages : ['hi'];
 
     try {
       const res = await fetch(`${API_URL}/api/translate/batch`, {
@@ -145,8 +144,6 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
       }
     } catch (err) {
       console.error('Translation pipeline error:', err);
-    } finally {
-      processingRef.current = false;
     }
   }, [studentLanguages, socket, sessionCode, sessionId]);
 
