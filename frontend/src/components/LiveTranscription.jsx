@@ -38,41 +38,17 @@ export default function LiveTranscription({ sessionId, students = [], socket, se
 
     async function fetchLangs() {
       try {
-        // Strategy 1: Match by student names from props (socket-joined students)
+        // Get names of students actually in this session (from socket/LiveKit props)
         const propNames = students.map(s => s.name).filter(Boolean);
-        
-        // Strategy 2: Also get ALL students with non-English language as fallback
-        // (mobile students may not appear in socket props at all)
-        let profiles = [];
+        if (propNames.length === 0) return;
 
-        if (propNames.length > 0) {
-          // Fetch language for known students
-          const { data } = await supabase
-            .from('students')
-            .select('name, email, language')
-            .in('name', propNames);
-          if (data) profiles = data;
-        }
-
-        // Also fetch any students with non-English language who might be in this session
-        // Query by session_id if we have a livekit_participants or similar join table
-        // Fallback: get all non-English students (small table in classroom context)
-        const { data: multilingualStudents } = await supabase
+        // Fetch their language preferences from the students table
+        const { data: profiles } = await supabase
           .from('students')
-          .select('name, email, language')
-          .neq('language', 'en')
-          .not('language', 'is', null);
+          .select('name, language')
+          .in('name', propNames);
 
-        if (multilingualStudents) {
-          // Merge — multilingual students take priority
-          multilingualStudents.forEach(ms => {
-            if (!profiles.find(p => p.email === ms.email)) {
-              profiles.push(ms);
-            }
-          });
-        }
-
-        if (!cancelled && profiles.length > 0) {
+        if (!cancelled && profiles && profiles.length > 0) {
           const langMap = {};
           profiles.forEach(p => { 
             if (p.language && p.language !== '') {
