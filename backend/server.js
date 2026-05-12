@@ -1,4 +1,4 @@
-// ClassTwin Backend Server — Express + Socket.io
+﻿// ClassTwin Backend Server â€” Express + Socket.io
 
 require('dotenv').config();
 const { GoogleGenAI } = require('@google/genai');
@@ -12,6 +12,8 @@ const { getAIInsight } = require('./aiService');
 const { supabase, createUserClient } = require('./supabaseClient');
 const { generateToken, createRoom, deleteRoom, isTeacherInRoom, LIVEKIT_URL } = require('./livekitService');
 const { handleTwinChat, getClassroomState } = require('./twinChatService');
+const { translateText, translateBatch, detectLanguage, SUPPORTED_LANGUAGES } = require('./translationService');
+const { synthesizeBatch } = require('./ttsService');
 
 const app = express();
 const httpServer = createServer(app);
@@ -27,9 +29,9 @@ app.use(express.json());
 
 const sessionManager = new SessionManager();
 
-// ═══════════════════════════════════════════════
-// Auth Middleware — verifies Supabase JWT
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Auth Middleware â€” verifies Supabase JWT
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -50,7 +52,7 @@ async function authMiddleware(req, res, next) {
 const SAMPLE_QUESTIONS = [
   { text: "What is the base case in recursion?", options: ["The recursive call itself", "The condition where the function stops calling itself", "The return value of the function", "None of the above"], correct: 1, concept: "Recursion Base Case" },
   { text: "What happens if a recursive function has no base case?", options: ["It returns undefined", "It causes a stack overflow", "It runs once and stops", "It optimizes automatically"], correct: 1, concept: "Infinite Recursion" },
-  { text: "What is the time complexity of binary search?", options: ["O(n)", "O(log n)", "O(n²)", "O(1)"], correct: 1, concept: "Binary Search" },
+  { text: "What is the time complexity of binary search?", options: ["O(n)", "O(log n)", "O(nÂ²)", "O(1)"], correct: 1, concept: "Binary Search" },
   { text: "Which data structure uses FIFO?", options: ["Stack", "Queue", "Tree", "Graph"], correct: 1, concept: "Queue Data Structure" },
   { text: "What does 'DRY' stand for in programming?", options: ["Do Repeat Yourself", "Don't Repeat Yourself", "Data Retrieval Yield", "Dynamic Resource Yielding"], correct: 1, concept: "DRY Principle" },
   { text: "What is a closure in JavaScript?", options: ["A function that closes the browser", "A function with access to its outer scope", "A terminated function", "A private class method"], correct: 1, concept: "Closures" },
@@ -58,9 +60,9 @@ const SAMPLE_QUESTIONS = [
   { text: "Which sorting algorithm has the best average case?", options: ["Bubble Sort", "Selection Sort", "Quick Sort", "Insertion Sort"], correct: 2, concept: "Sorting Algorithms" }
 ];
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // REST API Endpoints
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
@@ -210,7 +212,7 @@ app.get('/api/dashboard/oracle', authMiddleware, async (req, res) => {
       try {
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           contents: `Act as an expert teaching assistant. Based on this recent class data:\n${summaryStr}\nProvide a single insightful sentence (max 25 words) advising the teacher on their overall class performance or what missing concept they might need to revisit. Also provide an overall "Cognitive Sync" score out of 100 as an integer based on the average confidences, adjusting higher or lower by up to 10 points depending on recent trends. Return valid JSON only: { "message": "...", "score": 85 }.`
         });
 
@@ -257,9 +259,9 @@ app.post('/api/sessions', authMiddleware, async (req, res) => {
     }).select().single();
 
     if (insertErr) {
-      console.error('❌ Supabase insert error:', insertErr.message, insertErr.details);
+      console.error('âŒ Supabase insert error:', insertErr.message, insertErr.details);
     } else {
-      console.log(`✅ Session saved to Supabase: ${insertedData.id} (${insertedData.join_code})`);
+      console.log(`âœ… Session saved to Supabase: ${insertedData.id} (${insertedData.join_code})`);
     }
   } catch (err) {
     console.error('Error persisting session:', err);
@@ -268,7 +270,7 @@ app.post('/api/sessions', authMiddleware, async (req, res) => {
   res.json(session);
 });
 
-// List Live Sessions (for student app polling) — MUST be before /:code wildcard
+// List Live Sessions (for student app polling) â€” MUST be before /:code wildcard
 // Verifies the teacher is actually connected in the LiveKit room before returning as live
 app.get('/api/sessions/live', async (req, res) => {
   try {
@@ -285,12 +287,12 @@ app.get('/api/sessions/live', async (req, res) => {
     const verified = [];
     for (const session of data) {
       if (!session.livekit_room_name) {
-        // No room name — stale record, auto-clean
+        // No room name â€” stale record, auto-clean
         await supabase.from('sessions').update({
           is_streaming: false, status: 'ended',
           livekit_room_name: null, stream_started_at: null,
         }).eq('id', session.id);
-        console.log(`🧹 Auto-cleaned stale session (no room): ${session.join_code}`);
+        console.log(`ðŸ§¹ Auto-cleaned stale session (no room): ${session.join_code}`);
         continue;
       }
 
@@ -298,12 +300,12 @@ app.get('/api/sessions/live', async (req, res) => {
       if (teacherPresent) {
         verified.push(session);
       } else {
-        // Teacher left — auto-clean this session
+        // Teacher left â€” auto-clean this session
         await supabase.from('sessions').update({
           is_streaming: false, status: 'ended',
           livekit_room_name: null, stream_started_at: null,
         }).eq('id', session.id);
-        console.log(`🧹 Auto-cleaned orphaned session (teacher left): ${session.join_code} / ${session.topic}`);
+        console.log(`ðŸ§¹ Auto-cleaned orphaned session (teacher left): ${session.join_code} / ${session.topic}`);
       }
     }
 
@@ -314,16 +316,16 @@ app.get('/api/sessions/live', async (req, res) => {
   }
 });
 
-// Get session by code (public — students use this to join)
+// Get session by code (public â€” students use this to join)
 app.get('/api/sessions/:code', (req, res) => {
   const session = sessionManager.getSession(req.params.code);
   if (!session) return res.status(404).json({ error: 'Session not found' });
   res.json(session);
 });
 
-// ═══════════════════════════════════════════════
-// Teacher Chat Message — insert + broadcast to students
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Teacher Chat Message â€” insert + broadcast to students
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 app.post('/api/sessions/:id/teacher-message', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { message } = req.body;
@@ -374,10 +376,133 @@ app.post('/api/sessions/:id/teacher-message', authMiddleware, async (req, res) =
       sentAt: inserted.sent_at,
     });
 
-    console.log(`📢 Teacher message sent to session-${sessionRow.join_code}: "${message.trim()}"`);
+    console.log(`ðŸ“¢ Teacher message sent to session-${sessionRow.join_code}: "${message.trim()}"`);
     res.json({ success: true, message: inserted });
   } catch (err) {
     console.error('Teacher message error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Lingua Translation Endpoints
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// List all supported languages
+app.get('/api/languages', (req, res) => {
+  res.json({ languages: SUPPORTED_LANGUAGES });
+});
+
+// Translate text (single language pair)
+app.post('/api/translate', async (req, res) => {
+  const { text, sourceLang, targetLang } = req.body;
+  if (!text || !targetLang) {
+    return res.status(400).json({ error: 'text and targetLang are required' });
+  }
+  try {
+    const translatedText = await translateText(text, sourceLang || 'en', targetLang);
+    res.json({ translatedText, sourceLang: sourceLang || 'en', targetLang });
+  } catch (err) {
+    console.error('Translation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Translate text to multiple languages at once
+app.post('/api/translate/batch', async (req, res) => {
+  const { text, sourceLang, targetLangs } = req.body;
+  if (!text || !targetLangs || !Array.isArray(targetLangs)) {
+    return res.status(400).json({ error: 'text and targetLangs[] are required' });
+  }
+  try {
+    const translations = await translateBatch(text, sourceLang || 'en', targetLangs);
+    res.json({ translations, sourceLang: sourceLang || 'en' });
+  } catch (err) {
+    console.error('Batch translation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Translate teacher message and broadcast to students grouped by language
+app.post('/api/sessions/:id/translate-message', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { message, translations: providedTranslations } = req.body;
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  try {
+    const userClient = createUserClient(req.accessToken);
+
+    // Verify session ownership
+    const { data: sessionRow, error: fetchErr } = await userClient
+      .from('sessions')
+      .select('id, join_code')
+      .eq('id', id)
+      .eq('created_by', req.user.id)
+      .single();
+
+    if (fetchErr || !sessionRow) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Insert original message
+    const { data: inserted, error: insertErr } = await supabase
+      .from('chat_messages')
+      .insert({
+        session_id: id,
+        student_name: 'Teacher',
+        message_text: message.trim(),
+        is_anonymous: false,
+        is_teacher: true,
+        student_id: null,
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      return res.status(500).json({ error: insertErr.message });
+    }
+
+    // Broadcast original message via socket
+    io.to(`session-${sessionRow.join_code}`).emit('teacher_message', {
+      id: inserted.id,
+      sessionId: id,
+      message: inserted.message_text,
+      sentAt: inserted.sent_at,
+    });
+
+    // Broadcast translations to students grouped by language
+    const translationsToSend = providedTranslations || {};
+    if (Object.keys(translationsToSend).length > 0) {
+      io.to(`session-${sessionRow.join_code}`).emit('translated_content', {
+        messageId: inserted.id,
+        originalText: message.trim(),
+        sourceLang: 'en',
+        translations: translationsToSend,
+        sentAt: inserted.sent_at,
+      });
+      console.log(`ðŸŒ Translated message sent in ${Object.keys(translationsToSend).length} languages to session-${sessionRow.join_code}`);
+    }
+
+    res.json({ success: true, message: inserted, translations: translationsToSend });
+  } catch (err) {
+    console.error('Translate-message error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Detect language of student text
+app.post('/api/detect-language', async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'text is required' });
+  }
+  try {
+    const detectedLang = await detectLanguage(text);
+    res.json({ language: detectedLang });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -412,7 +537,7 @@ app.post('/api/students/resolve', async (req, res) => {
 // In-memory store for imported students (fallback when DB table not ready)
 const importedStudentsStore = {};
 
-// POST /api/students/import — Bulk import students from CSV
+// POST /api/students/import â€” Bulk import students from CSV
 app.post('/api/students/import', authMiddleware, async (req, res) => {
   try {
     const { students } = req.body;
@@ -480,7 +605,7 @@ app.post('/api/students/import', authMiddleware, async (req, res) => {
       }
     }
 
-    console.log(`📥 Import complete: ${imported} imported, ${failed} failed (memory: ${useMemory})`);
+    console.log(`ðŸ“¥ Import complete: ${imported} imported, ${failed} failed (memory: ${useMemory})`);
     res.json({ imported, failed, total: students.length });
   } catch (err) {
     console.error('Import error:', err);
@@ -488,7 +613,7 @@ app.post('/api/students/import', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/students/imported — Get imported students for roster
+// GET /api/students/imported â€” Get imported students for roster
 app.get('/api/students/imported', authMiddleware, async (req, res) => {
   try {
     const teacherId = req.user.id;
@@ -512,9 +637,9 @@ app.get('/api/students/imported', authMiddleware, async (req, res) => {
   }
 });
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Students Dashboard Endpoints
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // Get all unique students with aggregated stats
 app.get('/api/students', authMiddleware, async (req, res) => {
@@ -717,7 +842,7 @@ app.get('/api/students/:studentName/stats', authMiddleware, async (req, res) => 
       })(),
     };
 
-    // ── Streak calculation (LeetCode-style) ──
+    // â”€â”€ Streak calculation (LeetCode-style) â”€â”€
     // Sort ALL teacher sessions chronologically (oldest first)
     const allSessionsSorted = (sessions || []).slice().sort(
       (a, b) => new Date(a.created_at) - new Date(b.created_at)
@@ -770,9 +895,9 @@ app.get('/api/students/:studentName/stats', authMiddleware, async (req, res) => 
   }
 });
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Student Report Generation & Send to Parents
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // Generate a comprehensive student performance report
 app.get('/api/students/:studentName/report', authMiddleware, async (req, res) => {
@@ -937,7 +1062,7 @@ Write a professional, warm 3-4 sentence summary for the parent about their child
       studentId: studentRows[0]?.id || null,
     };
 
-    console.log(`📋 Report generated for student: ${studentName}`);
+    console.log(`ðŸ“‹ Report generated for student: ${studentName}`);
     res.json(report);
   } catch (err) {
     console.error('Error generating student report:', err);
@@ -987,7 +1112,7 @@ app.post('/api/students/:studentName/report/send', authMiddleware, async (req, r
       return res.status(500).json({ error: error.message });
     }
 
-    console.log(`📨 Report sent to parents for: ${studentName}`);
+    console.log(`ðŸ“¨ Report sent to parents for: ${studentName}`);
 
     // Also save email to session_students for future auto-fill
     if (email) {
@@ -995,7 +1120,7 @@ app.post('/api/students/:studentName/report/send', authMiddleware, async (req, r
         .from('session_students')
         .update({ email })
         .eq('student_name', studentName);
-      console.log(`📧 Email saved for student: ${studentName}`);
+      console.log(`ðŸ“§ Email saved for student: ${studentName}`);
     }
 
     res.json({ success: true, id: data?.id, sentAt: new Date().toISOString() });
@@ -1005,9 +1130,9 @@ app.post('/api/students/:studentName/report/send', authMiddleware, async (req, r
   }
 });
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // LiveKit Token Endpoint (teacher = publisher, student = viewer)
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 app.post('/api/livekit/token', async (req, res) => {
   const { roomName, identity, isTeacher = false, name = '' } = req.body;
@@ -1023,9 +1148,9 @@ app.post('/api/livekit/token', async (req, res) => {
   }
 });
 
-// ═══════════════════════════════════════════════
-// Start Stream — creates LiveKit room + updates Supabase + broadcasts
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Start Stream â€” creates LiveKit room + updates Supabase + broadcasts
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 app.post('/api/sessions/:id/start-stream', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -1081,7 +1206,7 @@ app.post('/api/sessions/:id/start-stream', authMiddleware, async (req, res) => {
       streamStartedAt: new Date().toISOString(),
     });
 
-    console.log(`🎥 Stream started: ${roomName} for session ${sessionRow.join_code}`);
+    console.log(`ðŸŽ¥ Stream started: ${roomName} for session ${sessionRow.join_code}`);
     res.json({ token, url: LIVEKIT_URL, roomName });
   } catch (err) {
     console.error('Start stream error:', err);
@@ -1089,9 +1214,9 @@ app.post('/api/sessions/:id/start-stream', authMiddleware, async (req, res) => {
   }
 });
 
-// ═══════════════════════════════════════════════
-// Rejoin Stream — teacher gets a fresh token for an already-live room (page refresh / navigation)
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Rejoin Stream â€” teacher gets a fresh token for an already-live room (page refresh / navigation)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 app.post('/api/sessions/:id/rejoin-stream', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -1122,7 +1247,7 @@ app.post('/api/sessions/:id/rejoin-stream', authMiddleware, async (req, res) => 
       isTeacher: true,
     });
 
-    console.log(`🔄 Teacher rejoined stream: ${sessionRow.livekit_room_name} for session ${sessionRow.join_code}`);
+    console.log(`ðŸ”„ Teacher rejoined stream: ${sessionRow.livekit_room_name} for session ${sessionRow.join_code}`);
     res.json({ token, url: LIVEKIT_URL, roomName: sessionRow.livekit_room_name });
   } catch (err) {
     console.error('Rejoin stream error:', err);
@@ -1130,9 +1255,9 @@ app.post('/api/sessions/:id/rejoin-stream', authMiddleware, async (req, res) => 
   }
 });
 
-// ═══════════════════════════════════════════════
-// Stop Stream — deletes LiveKit room + updates Supabase
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Stop Stream â€” deletes LiveKit room + updates Supabase
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 app.post('/api/sessions/:id/stop-stream', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -1150,18 +1275,18 @@ app.post('/api/sessions/:id/stop-stream', authMiddleware, async (req, res) => {
   }
 
   try {
-    // 1. Delete the LiveKit room on the server — kicks all participants
+    // 1. Delete the LiveKit room on the server â€” kicks all participants
     if (sessionRow.livekit_room_name) {
       try {
         await deleteRoom(sessionRow.livekit_room_name);
-        console.log(`🗑️ LiveKit room deleted: ${sessionRow.livekit_room_name}`);
+        console.log(`ðŸ—‘ï¸ LiveKit room deleted: ${sessionRow.livekit_room_name}`);
       } catch (roomErr) {
-        // Log but don't fail — room may already have been cleaned up by timeout
+        // Log but don't fail â€” room may already have been cleaned up by timeout
         console.warn('LiveKit deleteRoom warning (non-fatal):', roomErr.message);
       }
     }
 
-    // 2. Update Supabase — clear all streaming fields completely
+    // 2. Update Supabase â€” clear all streaming fields completely
     await userClient.from('sessions').update({
       is_streaming: false,
       livekit_room_name: null,
@@ -1180,7 +1305,7 @@ app.post('/api/sessions/:id/stop-stream', authMiddleware, async (req, res) => {
     // 4. Broadcast to all student sockets
     io.emit('session_ended_broadcast', { joinCode: sessionRow.join_code });
 
-    console.log(`🛑 Stream ended: session ${sessionRow.join_code}`);
+    console.log(`ðŸ›‘ Stream ended: session ${sessionRow.join_code}`);
     res.json({ success: true });
   } catch (err) {
     console.error('Stop stream error:', err);
@@ -1189,9 +1314,9 @@ app.post('/api/sessions/:id/stop-stream', authMiddleware, async (req, res) => {
 });
 
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Quiz Generation & Results Endpoints
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -1221,7 +1346,7 @@ app.post('/api/sessions/:id/generate-quiz', authMiddleware, async (req, res) => 
     }
 
     // Call Supabase Edge Function to generate questions via Gemini
-    console.log(`📝 Generating quiz for topic: "${topic}" (session ${sessionRow.join_code})`);
+    console.log(`ðŸ“ Generating quiz for topic: "${topic}" (session ${sessionRow.join_code})`);
 
     const edgeFnUrl = `${SUPABASE_URL}/functions/v1/generate-quiz`;
     const geminiRes = await fetch(edgeFnUrl, {
@@ -1251,7 +1376,7 @@ app.post('/api/sessions/:id/generate-quiz', authMiddleware, async (req, res) => 
 
     const nextRound = (existingQs && existingQs.length > 0) ? existingQs[0].round_number + 1 : 1;
 
-    console.log(`✅ Quiz generated (${source}): ${questions.length} questions, next round ${nextRound}`);
+    console.log(`âœ… Quiz generated (${source}): ${questions.length} questions, next round ${nextRound}`);
 
     // Build response WITHOUT DB IDs. Do NOT persist yet.
     const quizData = questions.map((q, i) => ({
@@ -1264,7 +1389,7 @@ app.post('/api/sessions/:id/generate-quiz', authMiddleware, async (req, res) => 
       timeLimit: 30,
     }));
 
-    // NOTE: Quiz is NOT auto-sent — teacher presses "Send to Students" explicitly
+    // NOTE: Quiz is NOT auto-sent â€” teacher presses "Send to Students" explicitly
     res.json({
       questions: quizData,
       roundNumber: nextRound,
@@ -1277,9 +1402,9 @@ app.post('/api/sessions/:id/generate-quiz', authMiddleware, async (req, res) => 
   }
 });
 
-// ═══════════════════════════════════════════════
-// Send Quiz to Students — teacher explicitly pushes quiz
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Send Quiz to Students â€” teacher explicitly pushes quiz
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 app.post('/api/sessions/:id/send-quiz', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { roundNumber, questions } = req.body;
@@ -1336,7 +1461,7 @@ app.post('/api/sessions/:id/send-quiz', authMiddleware, async (req, res) => {
     };
 
     io.to(`session-${sessionCode}`).emit('quiz_questions', payload);
-    console.log(`📤 Quiz round ${roundNumber} pushed to students in session-${sessionCode} (${questions.length} questions)`);
+    console.log(`ðŸ“¤ Quiz round ${roundNumber} pushed to students in session-${sessionCode} (${questions.length} questions)`);
 
     res.json({ success: true, studentCount: io.sockets.adapter.rooms.get(`session-${sessionCode}`)?.size || 0 });
   } catch (err) {
@@ -1407,7 +1532,7 @@ app.get('/api/sessions/:id/quiz-results', authMiddleware, async (req, res) => {
       }
 
       const qResponses = (responses || []).filter(r => r.question_id === q.id);
-      // Students submit option TEXT, correct_option is INDEX — check both
+      // Students submit option TEXT, correct_option is INDEX â€” check both
       const correctText = q.options?.[parseInt(q.correct_option, 10)];
       const correctCount = qResponses.filter(r => r.response === q.correct_option || r.response === correctText).length;
 
@@ -1445,12 +1570,12 @@ app.get('/api/sessions/:id/quiz-results', authMiddleware, async (req, res) => {
 });
 
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // WebSocket Events
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 io.on('connection', (socket) => {
-  console.log(`📡 Connected: ${socket.id}`);
+  console.log(`ðŸ“¡ Connected: ${socket.id}`);
 
   // Teacher creates session
   socket.on('create_session', async (data, callback) => {
@@ -1472,18 +1597,34 @@ io.on('connection', (socket) => {
     socket.join(`teacher-${code}`);
     socket.sessionCode = code;
     socket.role = 'teacher';
-    console.log(`🏫 Teacher socket ${socket.id} joined room teacher-${code}`);
+    console.log(`ðŸ« Teacher socket ${socket.id} joined room teacher-${code}`);
 
     try {
       // Find session ID from DB
       const { data: sessionRow } = await supabase.from('sessions').select('id').eq('join_code', code).single();
       let dbStudents = [];
       if (sessionRow) {
-        const { data: sStudents } = await supabase.from('session_students').select('id, student_name, joined_at').eq('session_id', sessionRow.id);
+        // Fetch session students
+        const { data: sStudents } = await supabase
+          .from('session_students')
+          .select('id, student_name, joined_at')
+          .eq('session_id', sessionRow.id);
+
         if (sStudents) {
+          // Fetch language preferences from students table
+          const studentNames = sStudents.map(s => s.student_name);
+          const { data: studentProfiles } = await supabase
+            .from('students')
+            .select('name, language')
+            .in('name', studentNames);
+
+          const langMap = {};
+          (studentProfiles || []).forEach(p => { langMap[p.name] = p.language; });
+
           dbStudents = sStudents.map(s => ({
             id: s.id,
             name: s.student_name,
+            language: langMap[s.student_name] || 'en',
             status: 'neutral',
           }));
         }
@@ -1510,10 +1651,11 @@ io.on('connection', (socket) => {
 
   // Student joins session
   socket.on('join', (data, callback) => {
-    const { sessionCode, studentName } = data;
+    const { sessionCode, studentName, language } = data;
     const student = sessionManager.addStudent(sessionCode, {
       id: socket.id,
-      name: studentName
+      name: studentName,
+      language: language || 'en',
     });
 
     if (!student) {
@@ -1525,14 +1667,96 @@ io.on('connection', (socket) => {
     socket.sessionCode = sessionCode;
     socket.role = 'student';
     socket.studentId = socket.id;
+    socket.preferredLanguage = language || 'en';
 
-    // Notify teacher
+    // Notify teacher (include language for LiveTranscription)
     io.to(`teacher-${sessionCode}`).emit('student_joined', {
-      student,
+      student: { ...student, language: language || 'en' },
       totalStudents: Object.keys(sessionManager.getSession(sessionCode).students).length
     });
 
     if (callback) callback({ success: true, student });
+  });
+
+  // â”€â”€ Lingua: Live translation broadcast (teacher speech â†’ students) â”€â”€
+  // Session ID cache to avoid repeated DB lookups
+  const sessionIdCache = {};
+  socket.on('live_translation', (data) => {
+    const { sessionCode: sCode, originalText, translations, sourceLang, timestamp } = data;
+    if (!sCode || !originalText) return;
+
+    // 1. Broadcast to web-based students via Socket.io (INSTANT â€” no await)
+    io.to(`session-${sCode}`).emit('translated_content', {
+      originalText,
+      sourceLang: sourceLang || 'en',
+      translations: translations || {},
+      timestamp: timestamp || Date.now(),
+    });
+
+    console.log(`ðŸŒ Live translation broadcast to session-${sCode}: "${originalText.slice(0, 50)}..." â†’ ${Object.keys(translations || {}).length} languages`);
+
+    // 2. Generate natural TTS audio + persist to Supabase (fire-and-forget, non-blocking)
+    (async () => {
+      try {
+        // Generate natural-sounding audio for each language in parallel
+        const audioMap = await synthesizeBatch(translations || {});
+        const audioLangs = Object.keys(audioMap);
+        if (audioLangs.length > 0) {
+          console.log('Neural TTS generated for: ' + audioLangs.join(', '));
+        }
+
+        // Look up session ID (cached)
+        let dbSessionId = sessionIdCache[sCode];
+        if (!dbSessionId) {
+          const { data: sessionRow } = await supabase
+            .from('sessions')
+            .select('id')
+            .eq('join_code', sCode)
+            .single();
+          if (sessionRow) {
+            dbSessionId = sessionRow.id;
+            sessionIdCache[sCode] = dbSessionId;
+          }
+        }
+
+        if (dbSessionId) {
+          // Merge audio into translations JSONB (no schema change needed)
+          // Format: { "kn": "text", "audio_kn": "base64wav...", "hi": "text", "audio_hi": "..." }
+          const mergedTranslations = { ...(translations || {}) };
+          for (const [lang, audioData] of Object.entries(audioMap)) {
+            mergedTranslations['audio_' + lang] = audioData;
+          }
+
+          const { error: insertErr } = await supabase.from('live_translations').insert({
+            session_id: dbSessionId,
+            original_text: originalText,
+            source_lang: sourceLang || 'en',
+            translations: mergedTranslations,
+          });
+          if (insertErr) {
+            console.error('live_translations insert failed:', insertErr.message);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to persist translation/audio to Supabase:', err.message);
+      }
+    })();
+  });
+
+  // â”€â”€ Lingua: Student changes preferred language mid-session â”€â”€
+  socket.on('set_language', (data) => {
+    const { language } = data;
+    if (!language || !socket.sessionCode) return;
+    
+    socket.preferredLanguage = language;
+    
+    // Notify teacher dashboard so LiveTranscription updates its target languages
+    io.to(`teacher-${socket.sessionCode}`).emit('student_language_changed', {
+      studentId: socket.id,
+      language,
+    });
+    
+    console.log(`ðŸŒ Student ${socket.id} changed language to ${language} in session ${socket.sessionCode}`);
   });
 
   // Teacher starts session
@@ -1695,7 +1919,7 @@ io.on('connection', (socket) => {
         return;
       }
 
-      console.log(`📩 Quiz answer received: student ${dbStudentId}, question ${questionId}, answer ${answer}`);
+      console.log(`ðŸ“© Quiz answer received: student ${dbStudentId}, question ${questionId}, answer ${answer}`);
 
       // Update session_students score columns (total_correct, total_answered)
       // First, determine if this answer is correct
@@ -1734,9 +1958,9 @@ io.on('connection', (socket) => {
             })
             .eq('id', dbStudentId);
         }
-        console.log(`📊 Score updated (fallback): student ${dbStudentId}, correct: ${answerIsCorrect}`);
+        console.log(`ðŸ“Š Score updated (fallback): student ${dbStudentId}, correct: ${answerIsCorrect}`);
       } else {
-        console.log(`📊 Score updated (rpc): student ${dbStudentId}, correct: ${answerIsCorrect}`);
+        console.log(`ðŸ“Š Score updated (rpc): student ${dbStudentId}, correct: ${answerIsCorrect}`);
       }
 
       // Fetch updated results for this question and emit to teacher
@@ -1753,7 +1977,7 @@ io.on('connection', (socket) => {
           .eq('question_id', questionId);
 
         const totalResponses = allResponses?.length || 0;
-        // Students submit option TEXT, correct_option is INDEX — resolve the correct answer text
+        // Students submit option TEXT, correct_option is INDEX â€” resolve the correct answer text
         const correctAnswerText = question.options?.[parseInt(question.correct_option, 10)];
         const correctCount = (allResponses || []).filter(r =>
           r.response === question.correct_option || r.response === correctAnswerText
@@ -1792,7 +2016,7 @@ io.on('connection', (socket) => {
               const studentName = r.session_students?.student_name || 'Unknown';
               if (!scoreBoard[studentName]) scoreBoard[studentName] = { name: studentName, score: 0, lastCorrectTime: 0 };
 
-              // Students submit option TEXT, correct_option is INDEX — check both
+              // Students submit option TEXT, correct_option is INDEX â€” check both
               const correctText = r.questions?.options?.[parseInt(r.questions?.correct_option, 10)];
               const isCorrect = String(r.response) === r.questions?.correct_option || String(r.response) === correctText;
               if (isCorrect) {
@@ -1823,15 +2047,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`📡 Disconnected: ${socket.id}`);
+    console.log(`ðŸ“¡ Disconnected: ${socket.id}`);
   });
 });
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Twin Insight Engine API
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// POST /api/twin-chat — Proxies to Supabase Edge Function (has GEMINI_API_KEY)
+// POST /api/twin-chat â€” Proxies to Supabase Edge Function (has GEMINI_API_KEY)
 app.post('/api/twin-chat', authMiddleware, async (req, res) => {
   try {
     const { message, mode, conversationHistory } = req.body;
@@ -1850,7 +2074,7 @@ app.post('/api/twin-chat', authMiddleware, async (req, res) => {
       return res.json(result);
     }
 
-    // For chat mode — proxy to the Supabase Edge Function which has GEMINI_API_KEY
+    // For chat mode â€” proxy to the Supabase Edge Function which has GEMINI_API_KEY
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const edgeFnUrl = `${SUPABASE_URL}/functions/v1/twin-chat`;
 
@@ -1882,7 +2106,7 @@ app.post('/api/twin-chat', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/twin-state — Live classroom state for metadata bar
+// GET /api/twin-state â€” Live classroom state for metadata bar
 app.get('/api/twin-state', authMiddleware, async (req, res) => {
   try {
     const userClient = createUserClient(req.accessToken);
@@ -1894,13 +2118,13 @@ app.get('/api/twin-state', authMiddleware, async (req, res) => {
   }
 });
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Start Server
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
-  console.log(`\n🚀 ClassTwin Server running on port ${PORT}`);
+  console.log(`\nðŸš€ ClassTwin Server running on port ${PORT}`);
   console.log(`   REST API: http://localhost:${PORT}/api`);
   console.log(`   WebSocket: ws://localhost:${PORT}\n`);
 });

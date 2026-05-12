@@ -4,6 +4,7 @@ import useSocket from '../hooks/useSocket';
 import useLiveKit from '../hooks/useLiveKit';
 import LiveVideoRoom from '../components/LiveVideoRoom';
 import Sidebar from '../components/Sidebar';
+import LiveTranscription from '../components/LiveTranscription';
 
 const mockStudents = [
   { id: 1, name: 'Alex Chen', status: 'understood', label: 'Student 01' },
@@ -32,7 +33,7 @@ export default function LiveDashboard() {
   const navigate = useNavigate();
   const sessionCode = params.get('code') || 'ABC123';
   const sessionId   = params.get('sessionId') || null;
-  const { students: liveStudents, aiInsight, classHealth, leaderboard } = useSocket(sessionCode);
+  const { socket, students: liveStudents, aiInsight, classHealth, leaderboard } = useSocket(sessionCode);
   const { token, livekitUrl, stopStream } = useLiveKit();
   const [elapsed, setElapsed] = useState(0);
   const [pipCollapsed, setPipCollapsed] = useState(false);
@@ -131,7 +132,20 @@ export default function LiveDashboard() {
               <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_back</span>
               Back to Lobby
             </button>
-            <button onClick={async () => { setSessionLive(false); if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} style={{
+            <button onClick={async () => {
+              setSessionLive(false);
+              if (sessionId) await stopStream(sessionId);
+              const searchParams = new URLSearchParams({
+                code: sessionCode,
+                duration: String(elapsed),
+                students: String(students.length),
+                comprehension: String(comprehension),
+                understood: String(understood),
+                confused: String(confused),
+                partial: String(partial),
+              });
+              navigate(`/session-ended?${searchParams.toString()}`);
+            }} style={{
               padding: '7px 18px', borderRadius: '999px',
               border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: 600,
               background: '#FEE2E2', cursor: 'pointer', transition: 'all 0.2s',
@@ -266,6 +280,16 @@ export default function LiveDashboard() {
               </div>
             )}
 
+            {/* 🌐 Lingua Live Audio Translation */}
+            {sessionLive && (
+              <LiveTranscription
+                sessionId={sessionId}
+                students={students.map(s => ({ name: s.name, language: s.language || 'en' }))}
+                socket={socket}
+                sessionCode={sessionCode}
+              />
+            )}
+
             {/* Stats summary */}
             <div style={{ padding: '16px', borderRadius: '16px', backgroundColor: 'var(--surface)', border: '1px solid var(--outline)', boxShadow: 'var(--shadow-xs)' }}>
               <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Session Stats</p>
@@ -310,7 +334,19 @@ export default function LiveDashboard() {
             </div>
             {!pipCollapsed && (
               <div style={{ padding: '10px', height: '200px' }}>
-                <LiveVideoRoom token={token} serverUrl={livekitUrl} onDisconnect={async () => { if (sessionId) await stopStream(sessionId); navigate('/analytics'); }} />
+                <LiveVideoRoom token={token} serverUrl={livekitUrl} onDisconnect={async () => {
+                  if (sessionId) await stopStream(sessionId);
+                  const searchParams = new URLSearchParams({
+                    code: sessionCode,
+                    duration: String(elapsed),
+                    students: String(students.length),
+                    comprehension: String(comprehension),
+                    understood: String(understood),
+                    confused: String(confused),
+                    partial: String(partial),
+                  });
+                  navigate(`/session-ended?${searchParams.toString()}`);
+                }} />
               </div>
             )}
           </div>

@@ -7,7 +7,7 @@
 
 <p align="center">
   <em>Track: AI & Intelligent Digital Twins</em><br/>
-  <strong>A real-time, AI-powered Digital Twin that mirrors every heartbeat of a live classroom.</strong>
+  <strong>A real-time, AI-powered Digital Twin that mirrors every heartbeat of a live classroom..</strong>
 </p>
 
 <p align="center">
