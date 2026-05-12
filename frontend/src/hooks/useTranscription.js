@@ -98,9 +98,9 @@ export default function useTranscription({
       if (interimTranscript && onInterimRef.current) {
         onInterimRef.current(interimTranscript.trim());
         
-        // Debounce: if interim text is long enough and stable for 1.5s, send it
-        // This gives faster feedback while still waiting for finals
-        if (interimTranscript.trim().split(' ').length >= 3) {
+        // Debounce: if interim text is long enough and stable for 700ms, send it
+        // Aggressive early-send for near-realtime translation
+        if (interimTranscript.trim().split(' ').length >= 2) {
           if (interimDebounceRef.current) {
             clearTimeout(interimDebounceRef.current);
           }
@@ -112,7 +112,7 @@ export default function useTranscription({
               console.log('⚡ Sending interim for early translation:', text.substring(0, 40));
               onTranscriptRef.current(text);
             }
-          }, 1500);
+          }, 700);
         }
       }
     };
